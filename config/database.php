@@ -1,8 +1,8 @@
 <?php
 // Database configuration
 define('DB_HOST', 'localhost');
-define('DB_USER', 'root');
-define('DB_PASS', '');
+define('DB_USER', 'golauser');
+define('DB_PASS', 'PickAStrongPassword123!');
 define('DB_NAME', 'goodness_omogo_db');
 
 // Create connection
