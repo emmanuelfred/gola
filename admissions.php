@@ -138,7 +138,7 @@ include 'includes/header.php';
             <div class="grid grid-cols-2 gap-4">
                 <div class="space-y-4">
                     <div class="bg-slate-200 rounded-2xl overflow-hidden aspect-[4/3]">
-                        <img src="./asset/feature.jpg" alt="Modern Classroom" class="w-full h-full object-cover">
+                        <img src="./asset/school/image6.jpeg" alt="Modern Classroom" class="w-full h-full object-cover">
                     </div>
                     <div class="bg-gradient-to-br from-green-400 to-green-600 rounded-2xl p-8 aspect-square flex items-center justify-center">
                         <div class="text-center text-white">

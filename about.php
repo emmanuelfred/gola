@@ -33,31 +33,56 @@ include 'includes/header.php';
 <section class="py-20 bg-white dark:bg-background-dark">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="grid lg:grid-cols-2 gap-16 items-center">
-            <div>
-                <span class="text-gold text-sm font-semibold uppercase tracking-widest">Our Foundation</span>
-                <h2 class="text-4xl lg:text-5xl font-display font-black text-primary dark:text-gold mt-4 mb-6">
-                    A Legacy of Excellence
-                </h2>
-                <div class="space-y-4 text-slate-600 dark:text-slate-400 leading-relaxed">
-                    <p>
-                        Founded with a vision to revolutionize secondary education in Nigeria, Goodness Omogo Leadership Academy has grown from a bold dream into one of the nation's most respected educational institutions.
-                    </p>
-                    <p>
-                        Our journey began with a simple yet powerful belief: that every child possesses unlimited potential, and with the right environment, guidance, and opportunities, they can achieve extraordinary things.
-                    </p>
-                    <p>
-                        Today, we stand proud as a beacon of academic excellence, character development, and leadership training. Our state-of-the-art facilities, coupled with our experienced faculty and innovative curriculum, create an environment where students don't just learn—they thrive.
-                    </p>
-                    <p>
-                        We have consistently maintained a 100% WAEC pass rate, with the majority of our graduates gaining admission to top universities both in Nigeria and internationally. But beyond academics, we measure our success by the character, resilience, and leadership qualities our students demonstrate.
-                    </p>
-                </div>
-            </div>
+  <div>
+    <span class="text-gold text-sm font-semibold uppercase tracking-widest">Our Foundation</span>
+
+    <h2 class="text-4xl lg:text-5xl font-display font-black text-primary dark:text-gold mt-4 mb-6">
+        A Brief History of GOLA
+    </h2>
+
+    <div class="space-y-4 text-base text-slate-600 dark:text-slate-400 leading-relaxed">
+        
+        <p>
+            Goodness Omogo Leadership Academy (GOLA) was founded from a vision of compassion, service, and leadership by Rev. Fr. Dr. Peter Omogo. Following the loss of Samuel Omogo in 2011, the Samuel Omogo Foundation began providing clean and safe drinking water to rural communities in Ebonyi State.
+        </p>
+
+        <p>
+            What started with a single borehole project at Mater Dei Parish Umuoguduoshia grew into a humanitarian movement that has provided over 500 boreholes across communities in the state.
+        </p>
+
+        <p>
+            Built on the pillars of Water, Education, and Health, the Foundation later expanded into education through the establishment of Goodness Omogo Leadership Academy (GOLA), with a mission to raise future leaders through academic excellence, leadership training, discipline, technology, entrepreneurship, sports, and character formation.
+        </p>
+
+        <p>
+            Located in Ebonyi State, GOLA provides a modern and inspiring learning environment with classrooms, hostels, administrative facilities, staff quarters, and other essential structures designed to support holistic student development.
+        </p>
+
+        <p>
+            As the Academy prepares for its official academic take-off in September 2026, GOLA remains committed to nurturing students to learn, grow, and lead with integrity and purpose.
+        </p>
+
+        <div class="pt-4">
+            <p class="font-bold text-primary dark:text-gold">Our Motto</p>
+            <p>To Learn • To Grow • To Lead</p>
+        </div>
+
+        <div class="pt-2">
+            <p class="font-semibold text-primary dark:text-gold">
+                Rev. Fr. Dr. Peter Omogo
+            </p>
+            <p class="italic">
+                Administrator, Goodness Omogo Leadership Academy
+            </p>
+        </div>
+
+    </div>
+</div>
             <div class="relative">
                 <div class="bg-gradient-to-br from-gold/20 to-primary/20 rounded-3xl p-2">
-                    <img src="./asset/courses-5.jpg" 
+                    <img src="./asset/about.jpg" 
                          alt="Our Campus" 
-                         class="w-full rounded-2xl shadow-2xl">
+                         class="w-full rounded-2xl shadow-2xl  object-cover">
                 </div>
                 <div class="absolute -bottom-6 -left-6 bg-gold text-primary px-8 py-6 rounded-2xl shadow-xl">
                     <p class="text-3xl font-display font-bold">15+</p>

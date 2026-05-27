@@ -33,6 +33,10 @@
                     <span class="material-symbols-outlined text-xl">group</span>
                     <span class="font-medium">Students</span>
                 </a>
+                <!--<a href="manage_staff.php" class="sidebar-link <?php //echo basename($_SERVER['PHP_SELF']) == 'manage_staff.php' ? 'active' : ''; ?> flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-white/5 transition-all">
+                    <span class="material-symbols-outlined text-xl">badge</span>
+                    <span class="font-medium">Staff Records</span>
+                </a>-->
             </div>
         </div>
         
@@ -40,31 +44,20 @@
         <div>
             <p class="px-4 text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Academics</p>
             <div class="space-y-1">
-
-                <!-- Results -->
                 <a href="manage_results.php" class="sidebar-link <?php echo in_array(basename($_SERVER['PHP_SELF']), ['manage_results.php','enter_results.php']) ? 'active' : ''; ?> flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-white/5 transition-all">
                     <span class="material-symbols-outlined text-xl">assignment</span>
                     <span class="font-medium">Results</span>
                 </a>
-
-                <!-- Class Subjects (sub-link, indented) -->
-                <a href="manage_class_subjects.php" class="sidebar-link <?php echo basename($_SERVER['PHP_SELF']) == 'manage_class_subjects.php' ? 'active' : ''; ?> flex items-center gap-3 pl-8 pr-4 py-2.5 rounded-lg hover:bg-white/5 transition-all">
-                    <span class="material-symbols-outlined text-base">class</span>
-                    <span class="font-medium text-sm">Class Subjects</span>
-                </a>
-
-                <!-- Sessions & Terms -->
-                <a href="manage_sessions.php" class="sidebar-link <?php echo basename($_SERVER['PHP_SELF']) == 'manage_sessions.php' ? 'active' : ''; ?> flex items-center gap-3 pl-8 pr-4 py-2.5 rounded-lg hover:bg-white/5 transition-all">
-                    <span class="material-symbols-outlined text-base">calendar_month</span>
-                    <span class="font-medium text-sm">Sessions & Terms</span>
-                </a>
-
-                <!-- Scratch Cards -->
                 <a href="manage_scratch_cards.php" class="sidebar-link <?php echo basename($_SERVER['PHP_SELF']) == 'manage_scratch_cards.php' ? 'active' : ''; ?> flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-white/5 transition-all">
                     <span class="material-symbols-outlined text-xl">confirmation_number</span>
                     <span class="font-medium">Scratch Cards</span>
                 </a>
 
+                <!-- Admissions sub-link -->
+                <a href="manage_admissions.php" class="sidebar-link <?php echo in_array(basename($_SERVER['PHP_SELF']), ['manage_admissions.php']) ? 'active' : ''; ?> flex items-center gap-3 pl-8 pr-4 py-2.5 rounded-lg hover:bg-white/5 transition-all">
+                    <span class="material-symbols-outlined text-base">how_to_reg</span>
+                    <span class="font-medium text-sm">Applications</span>
+                </a>
             </div>
         </div>
         
@@ -114,12 +107,12 @@
             </div>
         </div>
         
-        <!-- Administration (super_admin / admin only) -->
+        <!-- 🆕 Admin Users Section (NEW!) -->
         <?php if (isset($admin_role) && in_array($admin_role, ['super_admin', 'admin'])): ?>
         <div>
             <p class="px-4 text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Administration</p>
             <div class="space-y-1">
-                <a href="manage-admin-users.php" class="sidebar-link <?php echo in_array(basename($_SERVER['PHP_SELF']), ['manage-admin-users.php','add-admin-user.php','edit-admin-user.php']) ? 'active' : ''; ?> flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-white/5 transition-all">
+                <a href="manage-admin-users.php" class="sidebar-link <?php echo in_array(basename($_SERVER['PHP_SELF']), ['manage-admin-users.php', 'add-admin-user.php', 'edit-admin-user.php']) ? 'active' : ''; ?> flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-white/5 transition-all">
                     <span class="material-symbols-outlined text-xl">admin_panel_settings</span>
                     <span class="font-medium">Admin Users</span>
                 </a>
@@ -139,6 +132,10 @@
                     <span class="material-symbols-outlined text-xl">settings</span>
                     <span class="font-medium">Settings</span>
                 </a>
+                <a href="manage_settings.php" class="sidebar-link <?php echo basename($_SERVER['PHP_SELF']) == 'manage_settings.php' ? 'active' : ''; ?> flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-white/5 transition-all">
+                    <span class="material-symbols-outlined text-xl">tune</span>
+                    <span class="font-medium">School Settings</span>
+                </a>
             </div>
         </div>
         
@@ -146,6 +143,7 @@
 </aside>
 
 <style>
+/* Active sidebar link styling */
 .sidebar-link.active {
     background: rgba(255, 255, 255, 0.1);
     border-left: 4px solid var(--gold, #C5A059);
