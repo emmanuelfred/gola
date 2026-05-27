@@ -45,6 +45,12 @@ CREATE TABLE `academic_departments` (
 -- Dumping data for table `academic_departments`
 --
 
+INSERT INTO `academic_departments` (`id`, `department_name`, `slug`, `description`, `subjects_covered`, `featured_image`, `icon_type`, `display_order`, `is_active`, `created_at`, `updated_at`) VALUES
+(1, 'Sciences', 'sciences', 'Nurturing future scientists, engineers, and medical professionals through rigorous STEM education.', 'Physics, Chemistry, Biology, Further Mathematics, Computer Science', NULL, 'science', 1, 1, '2026-02-12 18:14:49', '2026-02-12 18:14:49'),
+(2, 'Humanities & Arts', 'humanities-arts', 'Developing critical thinking, creativity, and cultural awareness through literature and social sciences.', 'Literature, History, Government, CRS/IRS, Visual Arts', NULL, 'menu_book', 2, 1, '2026-02-12 18:14:49', '2026-02-12 18:14:49'),
+(3, 'Commercials', 'commercials', 'Preparing business leaders and entrepreneurs with essential financial and management skills.', 'Economics, Accounting, Commerce, Business Studies', NULL, 'business_center', 3, 1, '2026-02-12 18:14:49', '2026-02-12 18:14:49'),
+(4, 'Leadership Center', 'leadership', 'Building character, ethics, and leadership qualities for tomorrow\'s change-makers.', 'Leadership Development, Civic Education, Public Speaking, Ethics', NULL, 'group', 4, 1, '2026-02-12 18:14:49', '2026-02-12 18:14:49');
+
 -- --------------------------------------------------------
 
 --
@@ -70,6 +76,20 @@ CREATE TABLE `academic_events` (
 -- Dumping data for table `academic_events`
 --
 
+INSERT INTO `academic_events` (`id`, `title`, `description`, `event_date`, `event_time`, `event_type`, `location`, `pdf_file`, `is_featured`, `is_active`, `created_at`, `updated_at`) VALUES
+(1, 'Inter-House Sports Festival 2025', 'Annual athletic competition featuring track and field events across all houses', '2025-02-24', '8:00 AM - 4:00 PM', 'Sports', 'School Sports Complex', NULL, 1, 1, '2026-02-12 18:31:33', '2026-02-12 18:31:33'),
+(2, 'Mid-Term Parent/Teacher Consultation', 'Meet with teachers to discuss your child\'s progress and development', '2025-03-02', '10:00 AM - 2:00 PM', 'Meeting', 'School Hall', NULL, 1, 1, '2026-02-12 18:31:33', '2026-02-12 18:31:33'),
+(3, 'Annual Leadership Symposium', 'Featuring keynote speakers from business, government, and civil society', '2025-03-15', '9:00 AM - 3:00 PM', 'Cultural', 'Main Auditorium', NULL, 1, 1, '2026-02-12 18:31:33', '2026-02-12 18:31:33'),
+(4, 'First Term Begins', 'Resumption for 2024/2025 Academic Session', '2024-09-16', '8:00 AM', 'Other', 'All Classes', NULL, 0, 1, '2026-02-12 18:31:33', '2026-02-12 18:31:33'),
+(5, 'Mid-Term Break', 'One week mid-term break', '2024-10-28', 'All Day', 'Holiday', 'N/A', NULL, 0, 1, '2026-02-12 18:31:33', '2026-02-12 18:31:33'),
+(6, 'First Term Exams', 'First term examination period', '2024-12-02', '8:00 AM', 'Exam', 'Examination Halls', NULL, 0, 1, '2026-02-12 18:31:33', '2026-02-12 18:31:33'),
+(7, 'First Term Ends', 'End of first term academic activities', '2024-12-20', '2:00 PM', 'Other', 'All Classes', NULL, 0, 1, '2026-02-12 18:31:33', '2026-02-12 18:31:33'),
+(8, 'Second Term Begins', 'Resumption for second term', '2025-01-13', '8:00 AM', 'Other', 'All Classes', NULL, 0, 1, '2026-02-12 18:31:33', '2026-02-12 18:31:33'),
+(9, 'WAEC Registration', 'Registration for WAEC examinations', '2025-02-10', '9:00 AM - 3:00 PM', 'Activity', 'Admin Block', NULL, 0, 1, '2026-02-12 18:31:33', '2026-02-12 18:31:33'),
+(10, 'Cultural Day Celebration', 'Celebrating Nigeria\'s rich cultural diversity', '2025-04-20', '10:00 AM - 4:00 PM', 'Cultural', 'School Grounds', NULL, 1, 1, '2026-02-12 18:31:33', '2026-02-12 18:31:33'),
+(11, 'Science Fair & Exhibition', 'Students showcase innovative science projects', '2025-05-05', '9:00 AM - 2:00 PM', 'Activity', 'STEM Laboratory', NULL, 1, 1, '2026-02-12 18:31:33', '2026-02-12 18:31:33'),
+(12, 'Graduation Ceremony 2025', 'Celebrating the success of our graduating students', '2025-06-15', '10:00 AM - 1:00 PM', 'Other', 'Main Hall', NULL, 1, 1, '2026-02-12 18:31:33', '2026-02-12 18:31:33');
+
 -- --------------------------------------------------------
 
 --
@@ -89,7 +109,9 @@ CREATE TABLE `academic_sessions` (
 -- Dumping data for table `academic_sessions`
 --
 
-
+INSERT INTO `academic_sessions` (`id`, `session_name`, `start_date`, `end_date`, `is_current`, `created_at`) VALUES
+(1, '2024/2025', '2024-09-01', '2025-08-31', 0, '2026-02-12 15:36:38'),
+(2, '2026/2027', '2026-09-01', '2027-12-15', 1, '2026-05-26 15:32:38');
 
 -- --------------------------------------------------------
 
@@ -109,6 +131,33 @@ CREATE TABLE `activity_logs` (
 --
 -- Dumping data for table `activity_logs`
 --
+
+INSERT INTO `activity_logs` (`id`, `user_id`, `action`, `description`, `ip_address`, `created_at`) VALUES
+(1, 1, 'login', 'User logged in', '::1', '2026-02-12 16:12:34'),
+(2, 1, 'logout', 'User logged out', '::1', '2026-02-12 16:19:05'),
+(3, 1, 'login', 'User logged in', '::1', '2026-02-12 16:22:00'),
+(4, 1, 'delete_news', 'Deleted news article ID: 1', '::1', '2026-02-12 16:37:05'),
+(5, 1, 'create_news', 'Created news article: fsv', '::1', '2026-02-12 16:48:29'),
+(6, 1, 'add_gallery_image', 'Uploaded gallery image: somethin new', '::1', '2026-02-12 17:35:05'),
+(7, 1, 'add_event', 'Added event: love', '::1', '2026-02-12 18:43:22'),
+(8, 1, 'generate_cards', 'Generated 10 scratch cards (max 5 uses each)', '::1', '2026-02-12 23:07:47'),
+(9, 1, 'activate_cards', 'Activated 1 scratch cards', '::1', '2026-02-12 23:08:49'),
+(10, 1, 'delete_gallery_image', 'Deleted gallery image ID: 1', '::1', '2026-02-13 09:46:59'),
+(11, 1, 'delete_gallery_image', 'Deleted gallery image ID: 2', '::1', '2026-02-13 09:47:06'),
+(12, 1, 'delete_gallery_image', 'Deleted gallery image ID: 3', '::1', '2026-02-13 09:47:40'),
+(13, 1, 'delete_event', 'Deleted event ID: 13', '::1', '2026-02-13 09:54:03'),
+(14, 1, 'login', 'User logged in', '::1', '2026-05-26 12:02:11'),
+(15, 1, 'logout', 'User logged out', '::1', '2026-05-26 12:04:40'),
+(16, 2, 'login', 'User logged in', '::1', '2026-05-26 12:04:53'),
+(17, 2, 'add_subject', 'Added subject: sdf (DD)', '::1', '2026-05-26 15:28:33'),
+(18, 2, 'add_session', 'Added session: 2026/2027', '::1', '2026-05-26 15:32:39'),
+(19, 2, 'set_current_session', 'Set session id=2 as current', '::1', '2026-05-26 15:32:59'),
+(20, 2, 'enter_student_results', 'Saved 8 subject scores for Chukwuemeka Adebayo', '::1', '2026-05-27 09:21:31'),
+(21, 2, 'publish_student_result', 'Published result for Chukwuemeka Adebayo', '::1', '2026-05-27 09:38:20'),
+(22, 2, 'add_subject', 'Added subject: language (MTN)', '::1', '2026-05-27 09:46:34'),
+(23, 2, 'enter_student_results', 'Saved 6 subject scores for Chukwuemeka Adebayo', '::1', '2026-05-27 09:51:50'),
+(24, 2, 'publish_student_result', 'Published result for Chukwuemeka Adebayo', '::1', '2026-05-27 09:52:36'),
+(25, 2, 'create_news', 'Created news article: dt', '::1', '2026-05-27 10:54:04');
 
 -- --------------------------------------------------------
 
@@ -131,6 +180,10 @@ CREATE TABLE `admin_users` (
 --
 -- Dumping data for table `admin_users`
 --
+
+INSERT INTO `admin_users` (`id`, `username`, `password`, `full_name`, `email`, `role`, `is_active`, `created_at`, `last_login`) VALUES
+(1, 'admin', '123456', 'System Administrator', 'admin@goodnessomogo.edu.ng', 'super_admin', 1, '2026-02-12 15:36:38', '2026-05-26 12:02:11'),
+(2, 'user', 'Action65.', 'Emmanuel', 'emmanuelfredrick66@gmail.com', 'teacher', 1, '2026-05-26 12:04:00', '2026-05-26 12:04:53');
 
 -- --------------------------------------------------------
 
@@ -506,6 +559,18 @@ CREATE TABLE `gallery_images` (
 -- Dumping data for table `gallery_images`
 --
 
+INSERT INTO `gallery_images` (`id`, `title`, `description`, `image_path`, `category`, `display_order`, `is_active`, `uploaded_by`, `created_at`, `updated_at`) VALUES
+(4, 'Modern Classroom', 'Air-conditioned, spacious learning spaces', 'classroom-modern.jpg', 'Classrooms', 4, 1, 'Admin', '2026-02-12 17:33:57', '2026-02-12 17:33:57'),
+(5, 'Smart Classroom', 'Interactive whiteboards and projectors', 'classroom-smart.jpg', 'Classrooms', 5, 1, 'Admin', '2026-02-12 17:33:57', '2026-02-12 17:33:57'),
+(6, 'STEM Laboratory', 'State-of-the-art science equipment', 'stem-lab.jpg', 'Facilities', 6, 1, 'Admin', '2026-02-12 17:33:57', '2026-02-12 17:33:57'),
+(7, 'School Library', '10,000+ books and digital resources', 'library.jpg', 'Facilities', 7, 1, 'Admin', '2026-02-12 17:33:57', '2026-02-12 17:33:57'),
+(8, 'Computer Laboratory', 'Latest technology for digital learning', 'computer-lab.jpg', 'Facilities', 8, 1, 'Admin', '2026-02-12 17:33:57', '2026-02-12 17:33:57'),
+(9, 'Sports Complex', 'Football, basketball, and athletics', 'sports-field.jpg', 'Sports', 9, 1, 'Admin', '2026-02-12 17:33:57', '2026-02-12 17:33:57'),
+(10, 'Indoor Sports Hall', 'Table tennis, badminton, and more', 'sports-indoor.jpg', 'Sports', 10, 1, 'Admin', '2026-02-12 17:33:57', '2026-02-12 17:33:57'),
+(11, 'Graduation Ceremony', 'Celebrating our graduates success', 'graduation.jpg', 'Events', 11, 1, 'Admin', '2026-02-12 17:33:57', '2026-02-12 17:33:57'),
+(12, 'Cultural Day', 'Celebrating Nigerias rich diversity', 'cultural-day.jpg', 'Events', 12, 1, 'Admin', '2026-02-12 17:33:57', '2026-02-12 17:33:57'),
+(13, 'somethin new', 'all', '1770917705_698e0f4957627.png', 'Facilities', 0, 1, 'System Administrator', '2026-02-12 17:35:05', '2026-02-12 17:35:05');
+
 -- --------------------------------------------------------
 
 --
@@ -562,6 +627,16 @@ CREATE TABLE `news_articles` (
 -- Dumping data for table `news_articles`
 --
 
+INSERT INTO `news_articles` (`id`, `title`, `slug`, `category`, `excerpt`, `content`, `featured_image`, `author`, `views`, `is_published`, `published_date`, `created_at`, `updated_at`) VALUES
+(2, 'Commissioning of the New Ultra-Modern STEM Laboratory', 'commissioning-ultra-modern-stem-laboratory', 'Facilities', 'Enhancing practical learning with state-of-the-art robotics and science equipment.', '<p>On October 28, 2024, Goodness Omogo Leadership Academy commissioned its new state-of-the-art STEM Laboratory, marking a significant milestone in our commitment to 21st-century education.</p>\n\n<h3>World-Class Facilities</h3>\n<p>The new laboratory features:</p>\n<ul>\n<li>Advanced robotics equipment for hands-on learning</li>\n<li>3D printing technology for design and innovation</li>\n<li>Modern chemistry and physics apparatus</li>\n<li>Computer-aided design (CAD) workstations</li>\n<li>Virtual reality learning modules</li>\n<li>Biotechnology research corner</li>\n</ul>\n\n<p>The facility was commissioned by Dr. Ngozi Okonjo-Iweala, Former Finance Minister and current Director-General of the World Trade Organization, who praised the school for investing in practical STEM education.</p>\n\n<h3>Impact on Learning</h3>\n<p>\"This laboratory will transform how our students engage with science and technology,\" said Mr. Adebayo Johnson, Head of Sciences. \"Students can now conduct experiments and projects that were previously impossible.\"</p>\n\n<p>The laboratory is equipped to accommodate 40 students at a time and will be available for both regular classes and after-school STEM clubs.</p>\n\n<p>This investment aligns with our vision to produce graduates who are not just academically sound but also practically skilled and innovation-ready.</p>', 'stem-lab.jpg', 'Admin', 1, 1, '2024-10-28', '2026-02-12 16:03:14', '2026-02-12 16:04:14'),
+(3, 'Inter-House Sports Festival 2024 - Red House Triumphs', 'inter-house-sports-festival-2024', 'Sports', 'Red House takes the trophy in a thrilling display of athletic excellence.', '<p>The annual Inter-House Sports Festival concluded on September 15, 2024, with Red House emerging victorious in a fiercely contested competition.</p>\n\n<h3>Final Standings</h3>\n<ol>\n<li><strong>Red House:</strong> 450 points</li>\n<li><strong>Blue House:</strong> 420 points</li>\n<li><strong>Green House:</strong> 380 points</li>\n<li><strong>Yellow House:</strong> 350 points</li>\n</ol>\n\n<h3>Highlights of the Day</h3>\n<p>The festival showcased outstanding athletic talent across various events including:</p>\n<ul>\n<li>Track and Field events (100m, 200m, 400m, relay races)</li>\n<li>Field events (Long jump, High jump, Shot put)</li>\n<li>Ball games (Football, Basketball, Volleyball)</li>\n<li>March past and House chants competition</li>\n</ul>\n\n<h3>Outstanding Athletes</h3>\n<p><strong>Male Athlete of the Year:</strong> Master Tunde Bakare (Red House) - Won gold in 100m, 200m, and Long Jump</p>\n<p><strong>Female Athlete of the Year:</strong> Miss Ada Nwosu (Blue House) - Dominated middle-distance races</p>\n\n<p>The Chief Guest, Olympic Gold Medalist Mr. Olusoji Fasuba, commended the students for their sportsmanship and encouraged them to pursue sports alongside academics.</p>\n\n<p>\"Sports build character, discipline, and resilience - qualities that will serve you well in life,\" Mr. Fasuba advised.</p>\n\n<p>The school is proud of all participants who demonstrated the true spirit of healthy competition and teamwork.</p>', 'sports-festival.jpg', 'Sports Coordinator', 0, 1, '2024-09-15', '2026-02-12 16:03:14', '2026-02-12 16:03:14'),
+(4, 'STEM Competition: Our Students Win National Robotics Challenge', 'students-win-national-robotics-challenge', 'Achievements', 'Three of our students represented Nigeria at the Pan-African Robotics Competition.', '<p>Goodness Omogo Leadership Academy students have brought glory to the institution by winning the National Robotics Challenge held in Abuja on November 5, 2024.</p>\n\n<h3>The Winning Team</h3>\n<p>Our team, named \"GOLA Innovators,\" comprised:</p>\n<ul>\n<li>Master Chinedu Okoro (SS2 Science) - Team Lead</li>\n<li>Miss Sarah Adeleke (SS2 Science) - Programmer</li>\n<li>Master Ibrahim Musa (SS2 Science) - Designer</li>\n</ul>\n\n<p>They competed against 50 teams from secondary schools across Nigeria with their project: \"AgriBot - An Automated Irrigation System for Smart Farming.\"</p>\n\n<h3>The Innovation</h3>\n<p>AgriBot is a solar-powered robot designed to:</p>\n<ul>\n<li>Monitor soil moisture levels</li>\n<li>Automatically irrigate farmland based on data</li>\n<li>Send real-time alerts to farmers via SMS</li>\n<li>Reduce water wastage by 60%</li>\n</ul>\n\n<p>The project impressed the judges with its practical application and potential to solve real agricultural challenges in Nigeria.</p>\n\n<h3>International Recognition</h3>\n<p>As national champions, the team will represent Nigeria at the Pan-African Robotics Competition in Nairobi, Kenya, in March 2025.</p>\n\n<p>\"We are incredibly proud of these brilliant minds,\" said Prof. Alewale Omogo, School Principal. \"This achievement validates our investment in STEM education and shows that our students can compete globally.\"</p>\n\n<p>The school has pledged full support for the team as they prepare for the international competition.</p>', 'robotics-win.jpg', 'Admin', 1, 1, '2024-11-05', '2026-02-12 16:03:14', '2026-02-13 09:56:18'),
+(5, 'World Teachers Day Celebration 2024', 'world-teachers-day-2024', 'Events', 'Honoring the dedicated educators who shape future leaders.', '<p>On October 5, 2024, Goodness Omogo Leadership Academy joined the global community in celebrating World Teachers Day, honoring our exceptional teaching staff.</p>\n\n<h3>Theme: \"Teachers Make the Difference\"</h3>\n<p>The celebration featured special presentations by students, award ceremonies, and a thanksgiving service acknowledging the tireless efforts of our educators.</p>\n\n<h3>Teacher of the Year Awards</h3>\n<p><strong>Overall Teacher of the Year:</strong> Mrs. Blessing Okafor (English Language)</p>\n<p><strong>Science Teacher Award:</strong> Mr. Kunle Ademola (Physics)</p>\n<p><strong>Humanities Teacher Award:</strong> Miss Ngozi Eze (Government)</p>\n<p><strong>Most Innovative Teacher:</strong> Mr. Tayo Williams (Computer Science)</p>\n\n<h3>Student Tributes</h3>\n<p>Students expressed heartfelt appreciation through poems, songs, and video presentations showcasing how teachers have impacted their lives.</p>\n\n<p>\"Teachers are not just instructors; they are mentors, role models, and life coaches,\" said Miss Jennifer Ade, Head Girl, during her address.</p>\n\n<p>The management presented gifts and certificates of appreciation to all teaching staff and reaffirmed its commitment to teacher welfare and professional development.</p>\n\n<p>We salute all our teachers for their dedication to nurturing excellence!</p>', 'teachers-day.jpg', 'Admin', 0, 1, '2024-10-05', '2026-02-12 16:03:14', '2026-02-12 16:03:14'),
+(6, 'New School Library Opens - 10,000 Books Collection', 'new-library-opens-10000-books', 'Facilities', 'A modern reading sanctuary for knowledge seekers.', '<p>The Goodness Omogo Leadership Academy Library officially opened its doors on August 20, 2024, offering students access to over 10,000 books and digital resources.</p>\n\n<h3>Library Features</h3>\n<ul>\n<li>Main reading hall with 200 seating capacity</li>\n<li>Quiet study rooms for individual research</li>\n<li>Digital resource center with 50 computers</li>\n<li>Audio-visual room for multimedia learning</li>\n<li>Children\'s corner for junior students</li>\n<li>E-library with access to international journals</li>\n</ul>\n\n<h3>Book Collection</h3>\n<p>The library houses diverse materials including:</p>\n<ul>\n<li>Subject textbooks and reference materials</li>\n<li>Literature classics and contemporary fiction</li>\n<li>Biography and history books</li>\n<li>Science and technology publications</li>\n<li>Career guidance materials</li>\n<li>Newspapers and magazines</li>\n</ul>\n\n<h3>Operating Hours</h3>\n<p>Monday - Friday: 7:30 AM - 6:00 PM<br>\nSaturday: 9:00 AM - 2:00 PM</p>\n\n<p>\"A school without a good library is like a house without windows,\" remarked the Librarian, Mrs. Funmi Adeyemi. \"This facility will significantly enhance our students\' research capabilities and reading culture.\"</p>\n\n<p>Students have expressed excitement about the new facility and are already making good use of its resources.</p>', 'library-opening.jpg', 'Admin', 0, 1, '2024-08-20', '2026-02-12 16:03:14', '2026-02-12 16:03:14'),
+(7, 'Test Article 1770914632', 'test-article-1770914632', 'General', 'This is a test excerpt', '<p>This is test content</p>', 'test-image.jpg', 'Test Admin', 0, 1, '2026-02-12', '2026-02-12 16:43:52', '2026-02-12 16:43:52'),
+(8, 'fsv', 'fsv', 'Academics', 'wfrfe', 'qfrgt', '1770914909_698e045dd76ea.png', 'System Administrator', 0, 1, '2026-02-13', '2026-02-12 16:48:29', '2026-02-12 16:48:29'),
+(9, 'dt', 'dt', 'Academics', 'ytt', 'td', '1779879244_6a16cd4c1d5e2.png', 'Emmanuel', 0, 1, '2026-05-27', '2026-05-27 10:54:04', '2026-05-27 10:54:04');
+
 -- --------------------------------------------------------
 
 --
@@ -590,6 +665,21 @@ CREATE TABLE `results` (
 -- Dumping data for table `results`
 --
 
+INSERT INTO `results` (`id`, `student_id`, `subject_id`, `class_id`, `session_id`, `term_id`, `ca1`, `ca2`, `exam_score`, `total_score`, `grade`, `remark`, `entered_by`, `created_at`, `updated_at`) VALUES
+(1, 1, 1, 10, 1, 1, 18.00, 17.00, 52.00, 87.00, 'A1', 'Excellent performance', 2, '2026-02-12 22:38:02', '2026-05-27 09:21:31'),
+(2, 1, 2, 10, 1, 1, 19.00, 18.00, 58.00, 95.00, 'A1', 'Distinction, keep it up', 2, '2026-02-12 22:38:02', '2026-05-27 09:21:31'),
+(3, 1, 14, 10, 1, 1, 20.00, 19.00, 55.00, 94.00, 'A1', 'Outstanding leadership traits', 2, '2026-02-12 22:38:02', '2026-05-27 09:21:30'),
+(4, 1, 3, 10, 1, 1, 15.00, 14.00, 42.00, 71.00, 'B2', 'Very good effort', 2, '2026-02-12 22:38:02', '2026-05-27 09:21:31'),
+(5, 1, 4, 10, 1, 1, 16.00, 15.00, 44.00, 75.00, 'A1', 'A solid performance', 2, '2026-02-12 22:38:02', '2026-05-27 09:21:30'),
+(6, 1, 5, 10, 1, 1, 17.00, 18.00, 45.00, 80.00, 'A1', 'Commendable work', 2, '2026-02-12 22:38:02', '2026-05-27 09:21:30'),
+(11, 1, 24, 10, 1, 1, 0.00, 10.00, 0.00, 10.00, 'F9', 'Fail', 2, '2026-05-27 09:21:31', '2026-05-27 09:21:31'),
+(12, 1, 48, 10, 1, 1, 20.00, 0.00, 40.00, 60.00, 'C4', 'Credit', 2, '2026-05-27 09:21:31', '2026-05-27 09:21:31'),
+(15, 1, 6, 10, 2, 1, 10.00, 0.00, 60.00, 70.00, 'B2', 'Very Good', 2, '2026-05-27 09:51:49', '2026-05-27 09:51:49'),
+(16, 1, 5, 10, 2, 1, 20.00, 0.00, 60.00, 80.00, 'A1', 'Excellent', 2, '2026-05-27 09:51:50', '2026-05-27 09:51:50'),
+(17, 1, 16, 10, 2, 1, 0.00, 0.00, 60.00, 60.00, 'C4', 'Credit', 2, '2026-05-27 09:51:50', '2026-05-27 09:51:50'),
+(18, 1, 48, 10, 2, 1, 6.00, 10.00, 60.00, 76.00, 'A1', 'Excellent', 2, '2026-05-27 09:51:50', '2026-05-27 09:51:50'),
+(19, 1, 15, 10, 2, 1, 20.00, 10.00, 0.00, 30.00, 'F9', 'Fail', 2, '2026-05-27 09:51:50', '2026-05-27 09:51:50'),
+(20, 1, 3, 10, 2, 1, 0.00, 0.00, 54.00, 54.00, 'C6', 'Credit', 2, '2026-05-27 09:51:50', '2026-05-27 09:51:50');
 
 --
 -- Triggers `results`
@@ -644,6 +734,9 @@ CREATE TABLE `result_summary` (
 -- Dumping data for table `result_summary`
 --
 
+INSERT INTO `result_summary` (`id`, `student_id`, `class_id`, `session_id`, `term_id`, `total_subjects`, `total_score`, `average_score`, `overall_grade`, `overall_position`, `class_size`, `attendance_present`, `attendance_total`, `class_teacher_comment`, `class_teacher_name`, `principal_comment`, `principal_name`, `published`, `published_at`, `result_unique_id`, `date_issued`, `next_term_begins`, `created_at`, `updated_at`) VALUES
+(1, 1, 10, 1, 1, 8, 572.00, 71.50, 'B2', '3rd', 45, 64, 65, 'Chukwuemeka is a diligent and highly focused student. He shows great potential in leadership and consistently assists his peers. His academic growth this term has been remarkable.', 'Mrs. Sarah Okon', 'A very impressive result. You are a true ambassador of the Academy\'s values. Maintain this standard of excellence.', 'DR. SAMUEL OMOGO', 1, NULL, 'GOLA-2026-00001', '2024-07-15', '2026-06-09', '2026-02-12 22:38:02', '2026-05-27 09:38:20'),
+(3, 1, 10, 2, 1, 6, 370.00, 61.67, 'C4', '3rd', 35, 60, 400, 'yufyy', 'yfyfu', 'pp', 'DR. SAMUEL OMOGO', 1, NULL, 'GOLA-2026-00001', '2026-05-27', '2026-05-26', '2026-05-27 09:52:35', '2026-05-27 09:52:35');
 
 -- --------------------------------------------------------
 
@@ -667,6 +760,21 @@ CREATE TABLE `scratch_cards` (
 -- Dumping data for table `scratch_cards`
 --
 
+INSERT INTO `scratch_cards` (`id`, `pin_code`, `serial_number`, `max_uses`, `times_used`, `is_activated`, `created_by`, `created_at`, `updated_at`) VALUES
+(1, 'GOLA-1234-5678-9012', 'SC-000001', 5, 0, 1, NULL, '2026-02-12 22:38:02', '2026-02-12 22:38:02'),
+(2, 'GOLA-9876-5432-1098', 'SC-000002', 5, 0, 1, NULL, '2026-02-12 22:38:02', '2026-02-12 22:38:02'),
+(3, 'GOLA-1111-2222-3333', 'SC-000003', 5, 5, 1, NULL, '2026-02-12 22:38:02', '2026-02-12 22:38:02'),
+(4, 'GOLA-4444-5555-6666', 'SC-000004', 5, 0, 0, NULL, '2026-02-12 22:38:02', '2026-02-12 22:38:02'),
+(5, 'GOLA-CBD7-F29A-A03F', 'SC-000005', 5, 0, 0, 1, '2026-02-12 23:07:46', '2026-02-12 23:07:46'),
+(6, 'GOLA-52A7-8196-F24D', 'SC-000007', 5, 0, 0, 1, '2026-02-12 23:07:46', '2026-02-12 23:07:46'),
+(7, 'GOLA-9992-FD8A-A1E8', 'SC-000009', 5, 0, 0, 1, '2026-02-12 23:07:47', '2026-02-12 23:07:47'),
+(8, 'GOLA-FF6E-BB60-D593', 'SC-000011', 5, 0, 0, 1, '2026-02-12 23:07:47', '2026-02-12 23:07:47'),
+(9, 'GOLA-9210-CE76-8CB7', 'SC-000013', 5, 0, 0, 1, '2026-02-12 23:07:47', '2026-02-12 23:07:47'),
+(10, 'GOLA-DD86-2C18-2F59', 'SC-000015', 5, 0, 0, 1, '2026-02-12 23:07:47', '2026-02-12 23:07:47'),
+(11, 'GOLA-1D2E-5F45-C28C', 'SC-000017', 5, 0, 0, 1, '2026-02-12 23:07:47', '2026-02-12 23:07:47'),
+(12, 'GOLA-4866-22E2-F993', 'SC-000019', 5, 0, 0, 1, '2026-02-12 23:07:47', '2026-02-12 23:07:47'),
+(13, 'GOLA-24A5-BA2C-A30F', 'SC-000021', 5, 2, 1, 1, '2026-02-12 23:07:47', '2026-05-27 10:02:05'),
+(14, 'GOLA-664C-5152-02FA', 'SC-000023', 5, 0, 0, 1, '2026-02-12 23:07:47', '2026-02-12 23:07:47');
 
 -- --------------------------------------------------------
 
@@ -754,6 +862,8 @@ CREATE TABLE `students` (
 -- Dumping data for table `students`
 --
 
+INSERT INTO `students` (`id`, `student_id`, `admission_number`, `first_name`, `middle_name`, `last_name`, `other_name`, `passport_photo`, `gender`, `date_of_birth`, `state_of_origin`, `lga`, `nationality`, `religion`, `blood_group`, `genotype`, `phone`, `email`, `admission_date`, `class_id`, `session_id`, `status`, `student_type`, `father_name`, `father_phone`, `father_occupation`, `mother_name`, `mother_phone`, `mother_occupation`, `guardian_name`, `guardian_phone`, `guardian_relationship`, `parent_email`, `parent_address`, `home_address`, `city`, `state`, `emergency_contact_name`, `emergency_contact_phone`, `emergency_contact_relationship`, `has_medical_condition`, `medical_condition_desc`, `allergies`, `physical_disability`, `doctor_name`, `doctor_phone`, `hospital_name`, `special_medical_instructions`, `previous_school_name`, `previous_school_address`, `previous_class_completed`, `reason_for_leaving`, `transfer_cert_number`, `previous_performance`, `date_left_previous`, `created_at`, `updated_at`) VALUES
+(1, 'GOLA/2023/SS2/045', 'GOLA/2023/SS2/045', 'Chukwuemeka', 'Daniel', 'Adebayo', '', NULL, 'Male', '2008-05-15', 'Abia', NULL, 'Nigerian', NULL, '', '', NULL, NULL, NULL, 10, 1, 'Active', 'Day', 'Mr. Daniel Adebayo', '08012345678', NULL, 'Mrs. Grace Adebayo', '08098765432', NULL, NULL, NULL, NULL, NULL, NULL, '15 Academy Drive', 'Abuja', 'FCT', NULL, NULL, NULL, 'No', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-02-12 22:38:01', '2026-02-12 22:38:01');
 
 -- --------------------------------------------------------
 
@@ -847,7 +957,12 @@ CREATE TABLE `terms` (
 --
 
 INSERT INTO `terms` (`id`, `term_name`, `session_id`, `start_date`, `end_date`, `is_current`, `created_at`) VALUES
-
+(1, 'First Term', 1, '2024-09-01', '2024-12-15', 0, '2026-02-12 15:36:38'),
+(2, 'Second Term', 1, '2025-01-06', '2025-04-15', 1, '2026-02-12 15:36:38'),
+(3, 'Third Term', 1, '2025-04-28', '2025-08-15', 0, '2026-02-12 15:36:38'),
+(4, 'First Term', 2, '2026-09-01', '2026-12-15', 0, '2026-05-26 15:32:38'),
+(5, 'Second Term', 2, '2027-01-06', '2027-04-15', 0, '2026-05-26 15:32:38'),
+(6, 'Third Term', 2, '2027-04-28', '2027-08-15', 0, '2026-05-26 15:32:38');
 
 --
 -- Indexes for dumped tables
