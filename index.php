@@ -55,7 +55,7 @@ include 'includes/header.php';
                 <div class="space-y-8 text-center lg:text-left">
                     <div class="inline-flex items-center gap-2 px-3 py-1 bg-gold/20 border border-gold/30 rounded-full text-gold font-semibold text-sm uppercase tracking-widest">
                         <span class="w-2 h-2 rounded-full bg-gold animate-pulse"></span>
-                        Nigeria's Premier Leadership School
+                        Goodness Omogo Leadership Academy
                     </div>
 
                     <!-- Slide-synced headline -->
