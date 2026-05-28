@@ -1,9 +1,10 @@
 <?php
 // Database configuration
 define('DB_HOST', 'localhost');
-define('DB_USER', 'golauser');
-define('DB_PASS', 'Gola@2024Strong!');
+define('DB_USER', 'root');
+define('DB_PASS', '');
 define('DB_NAME', 'goodness_omogo_db');
+
 // Create connection
 $conn = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);
 

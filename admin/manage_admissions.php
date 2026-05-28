@@ -1,5 +1,12 @@
 <?php
 require_once 'auth_check.php';
+require_once '../includes/email.php';
+
+function getSetting($conn, $key, $default = '') {
+    $r = $conn->query("SELECT setting_value FROM school_settings WHERE setting_key='".mysqli_real_escape_string($conn,$key)."' LIMIT 1");
+    $row = $r ? $r->fetch_assoc() : null;
+    return $row ? $row['setting_value'] : $default;
+}
 $page_title = "Manage Admissions";
 
 $success = '';
@@ -8,17 +15,17 @@ $error   = '';
 // ── Handle actions ─────────────────────────────────────────────────────────────
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
-    // Update status (approve / reject / shortlist / review)
+    // Update status (approve / reject / shortlist / review) + send email
     if ($_POST['action'] === 'update_status') {
         $app_id  = intval($_POST['app_id']);
         $status  = $_POST['status'] ?? '';
         $notes   = trim($_POST['admin_notes'] ?? '');
         $exam_no = trim($_POST['exam_no'] ?? '');
         $allowed = ['Under Review','Shortlisted','Admitted','Rejected'];
+
         if (in_array($status, $allowed)) {
-            $admitted_at = ($status === 'Admitted') ? 'NOW()' : 'NULL';
             $conn->query("UPDATE admissions_applications SET
-                status='$status',
+                status='".mysqli_real_escape_string($conn, $status)."',
                 admin_notes='".mysqli_real_escape_string($conn, $notes)."',
                 exam_no='".mysqli_real_escape_string($conn, $exam_no)."',
                 reviewed_by=$admin_id,
@@ -26,8 +33,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 ".($status==='Admitted' ? "admitted_at=NOW()," : "")."
                 updated_at=NOW()
                 WHERE id=$app_id");
+
             logActivity('update_application', "Set application #$app_id to $status");
-            $success = "Application updated to <strong>$status</strong>.";
+
+            // ── Fetch full application for email ──────────────────────
+            $app = $conn->query("SELECT * FROM admissions_applications WHERE id=$app_id")->fetch_assoc();
+
+            if ($app && filter_var($app['parent_email'], FILTER_VALIDATE_EMAIL)) {
+                $exam_date  = getSetting($conn, 'entrance_exam_date', '');
+                $exam_venue = getSetting($conn, 'entrance_exam_venue', '');
+
+                $mail_data = [
+                    'full_name'      => $app['full_name'],
+                    'email'          => $app['parent_email'],
+                    'application_no' => $app['application_no'],
+                    'exam_no'        => $exam_no ?: $app['exam_no'],
+                    'grade_applying' => $app['grade_applying_for'],
+                    'session'        => $app['session_applying'],
+                    'exam_date'      => $exam_date,
+                    'exam_venue'     => $exam_venue,
+                    'admin_notes'    => $notes,
+                ];
+
+                $mail_result = sendStatusUpdateEmail($status, $mail_data);
+
+                if ($mail_result['ok']) {
+                    $success = "Status updated to <strong>$status</strong> and email sent to {$app['parent_email']}.";
+                } else {
+                    $success = "Status updated to <strong>$status</strong>. <span class='text-amber-600'>⚠ Email failed: ".$mail_result['error']."</span>";
+                }
+            } else {
+                $success = "Status updated to <strong>$status</strong>. No email sent (no valid email on file).";
+            }
         }
     }
 
@@ -48,28 +85,88 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         if (!$app) {
             $error = 'Application not found or not yet Admitted.';
         } else {
-            // Generate student ID
-            $year  = date('Y');
-            $count = $conn->query("SELECT COUNT(*) as c FROM students WHERE student_id LIKE 'GOLA/$year/%'")->fetch_assoc()['c'];
-            $student_id = 'GOLA/'.$year.'/'.str_pad($count + 1, 3, '0', STR_PAD_LEFT);
+            // Generate student ID: GOLA/YYYY/NNN
+            $year   = date('Y');
+            $count  = $conn->query("SELECT COUNT(*) as c FROM students WHERE student_id LIKE 'GOLA/$year/%'")->fetch_assoc()['c'];
+            $student_id = 'GOLA/' . $year . '/' . str_pad($count + 1, 3, '0', STR_PAD_LEFT);
 
-            // Parse name (Surname First format)
-            $name_parts = explode(' ', trim($app['full_name']), 3);
+            // Parse name — application stores as "Surname Firstname Middlename"
+            $name_parts  = explode(' ', trim($app['full_name']), 3);
             $last_name   = $name_parts[0] ?? '';
             $first_name  = $name_parts[1] ?? '';
             $middle_name = $name_parts[2] ?? '';
 
-            $stmt = $conn->prepare("INSERT INTO students
-                (student_id, first_name, middle_name, last_name, class_id, gender,
-                 date_of_birth, parent_name, parent_phone, parent_email,
-                 address, admission_date, status)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURDATE(), 'Active')");
-            $parent = $app['father_name'] ?: $app['mother_name'] ?: $app['guardian_name'];
-            $phone  = $app['father_phone'] ?: $app['mother_phone'] ?: $app['guardian_phone'];
-            $stmt->bind_param("ssssissssss",
+            // Get current session id
+            $sess_row   = $conn->query("SELECT id FROM academic_sessions WHERE is_current=1 LIMIT 1")->fetch_assoc();
+            $session_id = $sess_row ? intval($sess_row['id']) : null;
+
+            // Map medical condition boolean → ENUM expected by students table
+            $medical_enum = $app['has_medical_condition'] ? 'Yes' : 'No';
+
+            $stmt = $conn->prepare("
+                INSERT INTO students (
+                    student_id, first_name, middle_name, last_name,
+                    gender, date_of_birth,
+                    state_of_origin, lga, nationality, religion,
+                    class_id, session_id, admission_date, status, student_type,
+
+                    father_name, father_phone,
+                    mother_name, mother_phone,
+                    guardian_name, guardian_phone, guardian_relationship,
+                    parent_email, home_address,
+
+                    emergency_contact_name, emergency_contact_phone,
+                    has_medical_condition, medical_condition_desc,
+                    allergies,
+                    doctor_name, doctor_phone,
+
+                    previous_school_name, previous_class_completed,
+                    reason_for_leaving
+                ) VALUES (
+                    ?, ?, ?, ?,
+                    ?, ?,
+                    ?, ?, ?, ?,
+                    ?, ?, CURDATE(), 'Active', 'Boarding',
+
+                    ?, ?,
+                    ?, ?,
+                    ?, ?, ?,
+                    ?, ?,
+
+                    ?, ?,
+                    ?, ?,
+                    ?,
+                    ?, ?,
+
+                    ?, ?,
+                    ?
+                )
+            ");
+
+            $stmt->bind_param(
+                "ssssssssssii" .   // student_id … session_id (int)
+                "sssssssss" .      // father_name … home_address (9 fields)
+                "sssssss" .        // emergency … doctor_phone (7 fields)
+                "sss",             // previous school fields
+
                 $student_id, $first_name, $middle_name, $last_name,
-                $class_id, $app['gender'], $app['date_of_birth'],
-                $parent, $phone, $app['parent_email'], $app['home_address']);
+                $app['gender'], $app['date_of_birth'],
+                $app['state_of_origin'], $app['lga'], $app['nationality'], $app['religion'],
+                $class_id, $session_id,
+
+                $app['father_name'], $app['father_phone'],
+                $app['mother_name'], $app['mother_phone'],
+                $app['guardian_name'], $app['guardian_phone'], $app['guardian_relationship'],
+                $app['parent_email'], $app['home_address'],
+
+                $app['emergency_contact_name'], $app['emergency_contact_phone'],
+                $medical_enum, $app['medical_condition_details'],
+                $app['allergy_details'],
+                $app['family_doctor'], $app['family_doctor_phone'],
+
+                $app['last_school'], $app['class_completed'],
+                $app['reason_for_leaving']
+            );
 
             if ($stmt->execute()) {
                 $new_student_id = $conn->insert_id;
@@ -77,9 +174,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                     status='Enrolled', enrolled_at=NOW(),
                     enrolled_as_student_id=$new_student_id WHERE id=$app_id");
                 logActivity('enrol_student', "Enrolled $student_id from application #$app_id");
-                $success = "Student <strong>$student_id</strong> enrolled and added to Students.";
+
+                // Send enrolment confirmation email
+                if (filter_var($app['parent_email'], FILTER_VALIDATE_EMAIL)) {
+                    sendStatusUpdateEmail('Enrolled', [
+                        'full_name'      => $app['full_name'],
+                        'email'          => $app['parent_email'],
+                        'application_no' => $app['application_no'],
+                        'exam_no'        => $app['exam_no'],
+                        'grade_applying' => $app['grade_applying_for'],
+                        'session'        => $app['session_applying'],
+                        'student_id'     => $student_id,
+                        'exam_date'      => '',
+                        'exam_venue'     => '',
+                        'admin_notes'    => '',
+                    ]);
+                }
+
+                $success = "Student <strong>$student_id</strong> enrolled successfully.";
             } else {
-                $error = 'Enrolment failed: '.$conn->error;
+                $error = 'Enrolment failed: ' . $stmt->error;
             }
         }
     }

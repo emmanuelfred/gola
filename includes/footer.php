@@ -9,6 +9,22 @@ if (!isset($base_path)) {
         $base_path = '';
     }
 }
+
+// ── Fetch contact settings from DB (same pattern as contact.php) ──────────────
+if (!function_exists('getSetting')) {
+    function getSetting($conn, $key, $default = '') {
+        $r = $conn->query("SELECT setting_value FROM school_settings WHERE setting_key='".mysqli_real_escape_string($conn,$key)."' LIMIT 1");
+        $row = $r ? $r->fetch_assoc() : null;
+        return $row ? $row['setting_value'] : $default;
+    }
+}
+
+// $conn is expected to be available (set in header.php / config/database.php)
+$footer_phone   = isset($conn) ? getSetting($conn, 'school_phone',   '09125128213') : '09125128213';
+$footer_email   = isset($conn) ? getSetting($conn, 'school_email',   'golaedu2026@gmail.com') : 'golaedu2026@gmail.com';
+$footer_address = isset($conn) ? getSetting($conn, 'school_address', 'Ntezi, Ishielu LGA, Ebonyi State, Nigeria') : 'Ntezi, Ishielu LGA, Ebonyi State, Nigeria';
+$footer_name    = isset($conn) ? getSetting($conn, 'school_name',    'Goodness Omogo Leadership Academy') : 'Goodness Omogo Leadership Academy';
+$footer_tagline = isset($conn) ? getSetting($conn, 'school_tagline',  'To Learn • To Grow • To Lead') : 'To Learn • To Grow • To Lead';
 ?>
 <footer class="bg-primary text-white mt-20">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
@@ -24,7 +40,7 @@ if (!isset($base_path)) {
                     Excellence in leadership and academics. Preparing tomorrow's leaders. Empowering students to excel globally and serve locally.
                 </p>
                 <p class="text-gold font-display italic text-sm">
-                    "To Learn • To Grow • To Lead"
+                    "<?php echo htmlspecialchars($footer_tagline); ?>"
                 </p>
             </div>
             
@@ -46,8 +62,7 @@ if (!isset($base_path)) {
                 <h3 class="text-gold font-semibold text-lg mb-4 uppercase tracking-wider">Resources</h3>
                 <ul class="space-y-3 text-sm">
                     <li><a href="<?php echo $base_path; ?>result-checker/" class="hover:text-gold transition-colors">Check Results</a></li>
-                    <li><a href="<?php echo $base_path; ?>admin/login.php" class="hover:text-gold transition-colors">Student Portal</a></li>
-                    <li><a href="<?php echo $base_path; ?>admin/login.php" class="hover:text-gold transition-colors">Parent Portal</a></li>
+                    
                     <li><a href="<?php echo $base_path; ?>admin/login.php" class="hover:text-gold transition-colors">Teacher Portal</a></li>
                     <li><a href="#" class="hover:text-gold transition-colors">Career Opportunities</a></li>
                     <li><a href="#" class="hover:text-gold transition-colors">School Fees & Finance</a></li>
@@ -62,15 +77,15 @@ if (!isset($base_path)) {
                 <ul class="space-y-4 text-sm">
                     <li class="flex items-start gap-3">
                         <span class="material-symbols-outlined text-gold mt-0.5">location_on</span>
-                        <span class="text-slate-300">12 Academy Boulevard, Victoria Island, Eko, Lagos, Nigeria</span>
+                        <span class="text-slate-300"><?php echo htmlspecialchars($footer_address); ?></span>
                     </li>
                     <li class="flex items-center gap-3">
                         <span class="material-symbols-outlined text-gold">phone</span>
-                        <a href="tel:+2348012345678" class="text-slate-300 hover:text-gold transition-colors">+234 (0) 800 123 4567</a>
+                        <a href="tel:<?php echo preg_replace('/\s+/', '', $footer_phone); ?>" class="text-slate-300 hover:text-gold transition-colors"><?php echo htmlspecialchars($footer_phone); ?></a>
                     </li>
                     <li class="flex items-center gap-3">
                         <span class="material-symbols-outlined text-gold">mail</span>
-                        <a href="mailto:info@goodnessomogo.edu.ng" class="text-slate-300 hover:text-gold transition-colors">info@goodnessomogo.edu.ng</a>
+                        <a href="mailto:<?php echo htmlspecialchars($footer_email); ?>" class="text-slate-300 hover:text-gold transition-colors"><?php echo htmlspecialchars($footer_email); ?></a>
                     </li>
                 </ul>
                 
@@ -106,7 +121,7 @@ if (!isset($base_path)) {
         <!-- Bottom Bar -->
         <div class="border-t border-slate-700 mt-12 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
             <p class="text-slate-400 text-sm text-center md:text-left">
-                © <?php echo date('Y'); ?> Goodness Omogo Leadership Academy. All rights reserved. 
+                © <?php echo date('Y'); ?> <?php echo htmlspecialchars($footer_name); ?>. All rights reserved. 
                 <span class="hidden md:inline">Powered by Academic Excellence</span>
             </p>
             <div class="flex gap-6 text-sm text-slate-400">

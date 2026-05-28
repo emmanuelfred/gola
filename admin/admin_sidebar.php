@@ -58,6 +58,11 @@
                     <span class="material-symbols-outlined text-base">how_to_reg</span>
                     <span class="font-medium text-sm">Applications</span>
                 </a>
+                <!-- Prospectus Requests sub-link -->
+                <a href="manage_prospectus_requests.php" class="sidebar-link <?php echo basename($_SERVER['PHP_SELF'])=='manage_prospectus_requests.php'?'active':''; ?> flex items-center gap-3 pl-8 pr-4 py-2.5 rounded-lg hover:bg-white/5 transition-all">
+                    <span class="material-symbols-outlined text-base">description</span>
+                    <span class="font-medium text-sm">Prospectus Requests</span>
+                </a>
             </div>
         </div>
         
