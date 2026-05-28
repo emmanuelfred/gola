@@ -69,10 +69,10 @@ include 'includes/header.php';
 
         <div class="pt-2">
             <p class="font-semibold text-primary dark:text-gold">
-                Rev. Fr. Dr. Peter Omogo
+               Rev Sr Dr Uche Nwobi
             </p>
             <p class="italic">
-                Administrator, Goodness Omogo Leadership Academy
+                Principal, Goodness Omogo Leadership Academy
             </p>
         </div>
 
@@ -80,7 +80,7 @@ include 'includes/header.php';
 </div>
             <div class="relative">
                 <div class="bg-gradient-to-br from-gold/20 to-primary/20 rounded-3xl p-2">
-                    <img src="./asset/about.jpg" 
+                    <img src="./asset/nwobi.jpeg" 
                          alt="Our Campus" 
                          class="w-full rounded-2xl shadow-2xl  object-cover">
                 </div>
@@ -453,13 +453,13 @@ lightbox.addEventListener('click', (e) => {
             <!-- Principal -->
             <div class="bg-white dark:bg-slate-800 rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all group">
                 <div class="h-64 bg-gradient-to-br from-primary to-slate-700 overflow-hidden">
-                    <img src="./asset/courses-5.jpg" 
+                    <img src="./asset/princpal.jpeg" 
                          alt="Principal" 
                          class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500">
                 </div>
                 <div class="p-6 text-center">
-                    <h3 class="text-xl font-bold text-primary dark:text-gold mb-1">Prof. Alewale Omogo</h3>
-                    <p class="text-sm text-gold mb-3">Principal & Founder</p>
+                    <h3 class="text-xl font-bold text-primary dark:text-gold mb-1">Rev. Fr. Dr. Peter Okwoeze Omogo</h3>
+                    <p class="text-sm text-gold mb-3">Founder</p>
                     <p class="text-sm text-slate-600 dark:text-slate-400">
                         Ph.D. in Educational Leadership
                     </p>
@@ -468,10 +468,14 @@ lightbox.addEventListener('click', (e) => {
             
             <!-- Vice Principal -->
             <div class="bg-white dark:bg-slate-800 rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all group">
-                <div class="h-64 bg-gradient-to-br from-gold to-amber-700"></div>
+                <div class="h-64 bg-gradient-to-br from-gold to-amber-700">
+                    <img src="./asset/nwobi.jpeg" 
+                         alt="Principal" 
+                         class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500">
+                </div>
                 <div class="p-6 text-center">
-                    <h3 class="text-xl font-bold text-primary dark:text-gold mb-1">Dr. Ngozi Adebayo</h3>
-                    <p class="text-sm text-gold mb-3">Vice Principal (Academics)</p>
+                    <h3 class="text-xl font-bold text-primary dark:text-gold mb-1">Rev Sr Dr Uche Nwobi</h3>
+                    <p class="text-sm text-gold mb-3">Principal (Academics)</p>
                     <p class="text-sm text-slate-600 dark:text-slate-400">
                         Ed.D. in Curriculum Development
                     </p>

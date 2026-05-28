@@ -258,7 +258,7 @@ include 'includes/header.php';
                 </p>
                 <div class="pt-4">
                     <p class="font-display text-2xl text-primary dark:text-gold font-bold">Rev. Fr. Dr. Peter Okwoeze Omogo</p>
-                    <p class="text-slate-500 dark:text-slate-400 italic">Principal & Founder</p>
+                    <p class="text-slate-500 dark:text-slate-400 italic"> Founder</p>
                 </div>
             </div>
         </div>
