@@ -1,6 +1,6 @@
 <?php
 require_once 'auth_check.php';
-if (!hasPermission('admin')) { header('Location: dashboard.php'); exit; }
+require_once '../config/database.php';
 $page_title = "School Settings";
 
 $success = '';
