@@ -1,3 +1,4 @@
+<link rel="icon" href="../asset/favicon.png" type="image/png">
 <?php
 // Database configuration
 define('DB_HOST', 'localhost');
