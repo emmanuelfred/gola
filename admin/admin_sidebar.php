@@ -33,6 +33,14 @@
                     <span class="material-symbols-outlined text-xl">group</span>
                     <span class="font-medium">Students</span>
                 </a>
+                <a href="manage_parents.php" class="sidebar-link <?php echo basename($_SERVER['PHP_SELF'])=='manage_parents.php'?'active':''; ?> flex items-center gap-3 pl-8 pr-4 py-2.5 rounded-lg hover:bg-white/5 transition-all">
+                    <span class="material-symbols-outlined text-base">family_restroom</span>
+                    <span class="font-medium text-sm">Parents & Comms</span>
+                </a>
+                <a href="manage_classes.php" class="sidebar-link <?php echo basename($_SERVER['PHP_SELF'])=='manage_classes.php'?'active':''; ?> flex items-center gap-3 pl-8 pr-4 py-2.5 rounded-lg hover:bg-white/5 transition-all">
+                    <span class="material-symbols-outlined text-base">school</span>
+                    <span class="font-medium text-sm">Classes</span>
+                </a>
                 <!--<a href="manage_staff.php" class="sidebar-link <?php //echo basename($_SERVER['PHP_SELF']) == 'manage_staff.php' ? 'active' : ''; ?> flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-white/5 transition-all">
                     <span class="material-symbols-outlined text-xl">badge</span>
                     <span class="font-medium">Staff Records</span>

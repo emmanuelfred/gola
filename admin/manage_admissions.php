@@ -7,6 +7,7 @@ function getSetting($conn, $key, $default = '') {
     $row = $r ? $r->fetch_assoc() : null;
     return $row ? $row['setting_value'] : $default;
 }
+
 $page_title = "Manage Admissions";
 
 $success = '';
@@ -15,14 +16,13 @@ $error   = '';
 // ── Handle actions ─────────────────────────────────────────────────────────────
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
-    // Update status (approve / reject / shortlist / review) + send email
+    // Update status + send email
     if ($_POST['action'] === 'update_status') {
         $app_id  = intval($_POST['app_id']);
         $status  = $_POST['status'] ?? '';
         $notes   = trim($_POST['admin_notes'] ?? '');
         $exam_no = trim($_POST['exam_no'] ?? '');
         $allowed = ['Under Review','Shortlisted','Admitted','Rejected'];
-
         if (in_array($status, $allowed)) {
             $conn->query("UPDATE admissions_applications SET
                 status='".mysqli_real_escape_string($conn, $status)."',
@@ -33,17 +33,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 ".($status==='Admitted' ? "admitted_at=NOW()," : "")."
                 updated_at=NOW()
                 WHERE id=$app_id");
-
             logActivity('update_application', "Set application #$app_id to $status");
 
-            // ── Fetch full application for email ──────────────────────
             $app = $conn->query("SELECT * FROM admissions_applications WHERE id=$app_id")->fetch_assoc();
-
             if ($app && filter_var($app['parent_email'], FILTER_VALIDATE_EMAIL)) {
                 $exam_date  = getSetting($conn, 'entrance_exam_date', '');
                 $exam_venue = getSetting($conn, 'entrance_exam_venue', '');
-
-                $mail_data = [
+                $mail_data  = [
                     'full_name'      => $app['full_name'],
                     'email'          => $app['parent_email'],
                     'application_no' => $app['application_no'],
@@ -54,14 +50,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                     'exam_venue'     => $exam_venue,
                     'admin_notes'    => $notes,
                 ];
-
                 $mail_result = sendStatusUpdateEmail($status, $mail_data);
-
-                if ($mail_result['ok']) {
-                    $success = "Status updated to <strong>$status</strong> and email sent to {$app['parent_email']}.";
-                } else {
-                    $success = "Status updated to <strong>$status</strong>. <span class='text-amber-600'>⚠ Email failed: ".$mail_result['error']."</span>";
-                }
+                $success = $mail_result['ok']
+                    ? "Status updated to <strong>$status</strong> and email sent to {$app['parent_email']}."
+                    : "Status updated to <strong>$status</strong>. <span class='text-amber-600'>Email failed: ".$mail_result['error']."</span>";
             } else {
                 $success = "Status updated to <strong>$status</strong>. No email sent (no valid email on file).";
             }
@@ -75,107 +67,85 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $success = "Payment verified.";
     }
 
-    // Enrol applicant directly into students table
+    // Enrol applicant into students table — maps ALL application fields
     if ($_POST['action'] === 'enrol' && hasPermission('admin')) {
-        $app_id   = intval($_POST['app_id']);
-        $class_id = intval($_POST['class_id']);
+        $app_id       = intval($_POST['app_id']);
+        $class_id     = intval($_POST['class_id']);
+        $student_type = in_array($_POST['student_type'] ?? 'Boarding', ['Boarding','Day'])
+                        ? $_POST['student_type'] : 'Boarding';
 
-        // Get application
         $app = $conn->query("SELECT * FROM admissions_applications WHERE id=$app_id AND status='Admitted'")->fetch_assoc();
         if (!$app) {
-            $error = 'Application not found or not yet Admitted.';
+            $error = 'Application not found or not yet set to Admitted.';
         } else {
-            // Generate student ID: GOLA/YYYY/NNN
-            $year   = date('Y');
-            $count  = $conn->query("SELECT COUNT(*) as c FROM students WHERE student_id LIKE 'GOLA/$year/%'")->fetch_assoc()['c'];
+            // Generate Student ID
+            $year  = date('Y');
+            $count = $conn->query("SELECT COUNT(*) as c FROM students WHERE student_id LIKE 'GOLA/$year/%'")->fetch_assoc()['c'];
             $student_id = 'GOLA/' . $year . '/' . str_pad($count + 1, 3, '0', STR_PAD_LEFT);
 
-            // Parse name — application stores as "Surname Firstname Middlename"
-            $name_parts  = explode(' ', trim($app['full_name']), 3);
-            $last_name   = $name_parts[0] ?? '';
-            $first_name  = $name_parts[1] ?? '';
-            $middle_name = $name_parts[2] ?? '';
-
-            // Get current session id
+            // Get current session_id
             $sess_row   = $conn->query("SELECT id FROM academic_sessions WHERE is_current=1 LIMIT 1")->fetch_assoc();
             $session_id = $sess_row ? intval($sess_row['id']) : null;
 
-            // Map medical condition boolean → ENUM expected by students table
-            $medical_enum = $app['has_medical_condition'] ? 'Yes' : 'No';
+            // Parse full name — stored as "SURNAME Firstname Middlename"
+            $parts       = explode(' ', trim($app['full_name']), 3);
+            $last_name   = $parts[0] ?? '';
+            $first_name  = $parts[1] ?? '';
+            $middle_name = $parts[2] ?? '';
+
+            // Map application health fields to students table format
+            $has_medical = $app['has_medical_condition'] ? 'Yes' : 'No';
+            $allergies   = $app['has_allergies'] ? ($app['allergy_details'] ?: 'Yes') : null;
 
             $stmt = $conn->prepare("
                 INSERT INTO students (
                     student_id, first_name, middle_name, last_name,
-                    gender, date_of_birth,
-                    state_of_origin, lga, nationality, religion,
-                    class_id, session_id, admission_date, status, student_type,
-
+                    gender, date_of_birth, state_of_origin, lga, nationality,
+                    religion, phone, class_id, session_id, admission_date,
+                    status, student_type,
                     father_name, father_phone,
                     mother_name, mother_phone,
                     guardian_name, guardian_phone, guardian_relationship,
                     parent_email, home_address,
-
                     emergency_contact_name, emergency_contact_phone,
                     has_medical_condition, medical_condition_desc,
-                    allergies,
-                    doctor_name, doctor_phone,
-
-                    previous_school_name, previous_class_completed,
-                    reason_for_leaving
+                    allergies, doctor_name, doctor_phone,
+                    previous_school_name, previous_class_completed, reason_for_leaving
                 ) VALUES (
-                    ?, ?, ?, ?,
-                    ?, ?,
-                    ?, ?, ?, ?,
-                    ?, ?, CURDATE(), 'Active', 'Boarding',
-
-                    ?, ?,
-                    ?, ?,
-                    ?, ?, ?,
-                    ?, ?,
-
-                    ?, ?,
-                    ?, ?,
-                    ?,
-                    ?, ?,
-
-                    ?, ?,
-                    ?
+                    ?,?,?,?,  ?,?,?,?,?,  ?,?,?,?,CURDATE(),  'Active',?,
+                    ?,?,  ?,?,  ?,?,?,  ?,?,
+                    ?,?,  ?,?,  ?,?,?,  ?,?,?
                 )
             ");
 
             $stmt->bind_param(
-                "ssssssssssii" .   // student_id … session_id (int)
-                "sssssssss" .      // father_name … home_address (9 fields)
-                "sssssss" .        // emergency … doctor_phone (7 fields)
-                "sss",             // previous school fields
-
+                "ssss" . "sssss" . "ssiis" .
+                "ss" . "ss" . "sss" . "ss" .
+                "ss" . "ss" . "sss" . "sss",
                 $student_id, $first_name, $middle_name, $last_name,
                 $app['gender'], $app['date_of_birth'],
-                $app['state_of_origin'], $app['lga'], $app['nationality'], $app['religion'],
+                $app['state_of_origin'], $app['lga'], $app['nationality'],
+                $app['religion'], $app['phone_number'],
                 $class_id, $session_id,
-
-                $app['father_name'], $app['father_phone'],
-                $app['mother_name'], $app['mother_phone'],
+                $student_type,
+                $app['father_name'],  $app['father_phone'],
+                $app['mother_name'],  $app['mother_phone'],
                 $app['guardian_name'], $app['guardian_phone'], $app['guardian_relationship'],
                 $app['parent_email'], $app['home_address'],
-
                 $app['emergency_contact_name'], $app['emergency_contact_phone'],
-                $medical_enum, $app['medical_condition_details'],
-                $app['allergy_details'],
-                $app['family_doctor'], $app['family_doctor_phone'],
-
-                $app['last_school'], $app['class_completed'],
-                $app['reason_for_leaving']
+                $has_medical, $app['medical_condition_details'],
+                $allergies, $app['family_doctor'], $app['family_doctor_phone'],
+                $app['last_school'], $app['class_completed'], $app['reason_for_leaving']
             );
 
             if ($stmt->execute()) {
-                $new_student_id = $conn->insert_id;
+                $new_db_id = $conn->insert_id;
                 $conn->query("UPDATE admissions_applications SET
                     status='Enrolled', enrolled_at=NOW(),
-                    enrolled_as_student_id=$new_student_id WHERE id=$app_id");
+                    enrolled_as_student_id=$new_db_id WHERE id=$app_id");
                 logActivity('enrol_student', "Enrolled $student_id from application #$app_id");
 
-                // Send enrolment confirmation email
+                // Send enrolment email
                 if (filter_var($app['parent_email'], FILTER_VALIDATE_EMAIL)) {
                     sendStatusUpdateEmail('Enrolled', [
                         'full_name'      => $app['full_name'],
@@ -185,15 +155,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                         'grade_applying' => $app['grade_applying_for'],
                         'session'        => $app['session_applying'],
                         'student_id'     => $student_id,
-                        'exam_date'      => '',
-                        'exam_venue'     => '',
-                        'admin_notes'    => '',
+                        'exam_date'      => '', 'exam_venue' => '', 'admin_notes' => '',
                     ]);
                 }
-
-                $success = "Student <strong>$student_id</strong> enrolled successfully.";
+                $success = "Student <strong>$student_id</strong> enrolled. All application data copied to student record.";
             } else {
-                $error = 'Enrolment failed: ' . $stmt->error;
+                $error = 'Enrolment failed: ' . $conn->error;
             }
         }
     }
@@ -404,7 +371,14 @@ if (isset($_GET['view'])) {
                         <?php endwhile; ?>
                     </select>
                 </div>
-                <button type="submit" onclick="return confirm('Enrol this applicant as a student?')"
+                <div>
+                    <label class="text-xs font-semibold text-green-700 mb-1 block">Student Type</label>
+                    <select name="student_type" class="w-full border-green-200 rounded-xl text-sm focus:ring-green-400 px-3 py-2">
+                        <option value="Boarding" selected>Boarding</option>
+                        <option value="Day">Day</option>
+                    </select>
+                </div>
+                <button type="submit" onclick="return confirm('Enrol this applicant? Their full application data will be copied to the student record.')"
                     class="w-full bg-green-600 text-white py-2.5 rounded-xl font-bold text-sm hover:bg-green-700">
                     <span class="material-symbols-outlined text-sm align-middle mr-1">person_add</span>Enrol Student
                 </button>

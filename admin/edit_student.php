@@ -65,7 +65,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             WHERE id=?";
 
         $stmt = $conn->prepare($sql);
-        $stmt->bind_param("sssssssssssssssississsssssssssssssssssssssssssssssssi",
+        $stmt->bind_param("sssssssssssssssiissssssssssssssssssssssssssssssssssi",
             $first_name, $_POST['middle_name'], $last_name, $passport_path, $gender, $dob,
             $_POST['state_of_origin'], $_POST['lga'], $_POST['nationality'], $_POST['religion'], $bg, $gt, $_POST['phone'], $_POST['email'],
             $adm_date, $class_id, $session_id, $_POST['status'], $_POST['student_type'],
