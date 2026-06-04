@@ -18,7 +18,7 @@ include 'includes/header.php';
 ?>
 
 <!-- Page Header -->
-<section class="py-16 bg-gradient-to-br from-primary to-slate-800 text-white">
+<section class="py-16 bg-gradient-to-br from-primary to-slate-800 text-white" style="background-image: linear-gradient(#002c47b0, #002c47c8), url('./asset/school/image1.jpeg'); background-size: cover; background-position: center;">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
         <div class="inline-flex items-center gap-2 px-4 py-2 bg-gold/20 border border-gold/30 rounded-full text-gold font-semibold text-sm uppercase tracking-widest mb-6">
             <span class="material-symbols-outlined">school</span>
@@ -32,63 +32,86 @@ include 'includes/header.php';
 <!-- Our Story Section -->
 <section class="py-20 bg-white dark:bg-background-dark">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="grid lg:grid-cols-2 gap-16 items-center">
-  <div>
-    <span class="text-gold text-sm font-semibold uppercase tracking-widest">Our Foundation</span>
 
-    <h2 class="text-4xl lg:text-5xl font-display font-black text-primary dark:text-gold mt-4 mb-6">
-        A Brief History of GOLA
-    </h2>
-
-    <div class="space-y-4 text-base text-slate-600 dark:text-slate-400 leading-relaxed">
-        
-        <p>
-            Goodness Omogo Leadership Academy (GOLA) was founded from a vision of compassion, service, and leadership by Rev. Fr. Dr. Peter Omogo. Following the loss of Samuel Omogo in 2011, the Samuel Omogo Foundation began providing clean and safe drinking water to rural communities in Ebonyi State.
-        </p>
-
-        <p>
-            What started with a single borehole project at Mater Dei Parish Umuoguduoshia grew into a humanitarian movement that has provided over 500 boreholes across communities in the state.
-        </p>
-
-        <p>
-            Built on the pillars of Water, Education, and Health, the Foundation later expanded into education through the establishment of Goodness Omogo Leadership Academy (GOLA), with a mission to raise future leaders through academic excellence, leadership training, discipline, technology, entrepreneurship, sports, and character formation.
-        </p>
-
-        <p>
-            Located in Ebonyi State, GOLA provides a modern and inspiring learning environment with classrooms, hostels, administrative facilities, staff quarters, and other essential structures designed to support holistic student development.
-        </p>
-
-        <p>
-            As the Academy prepares for its official academic take-off in September 2026, GOLA remains committed to nurturing students to learn, grow, and lead with integrity and purpose.
-        </p>
-
-        <div class="pt-4">
-            <p class="font-bold text-primary dark:text-gold">Our Motto</p>
-            <p>To Learn • To Grow • To Lead</p>
+        <!-- Header -->
+        <div class="text-center mb-12">
+            <span class="text-gold text-sm font-semibold uppercase tracking-widest">Our Foundation</span>
+            <h2 class="text-4xl lg:text-5xl font-display font-black text-primary dark:text-gold mt-4">
+                A Brief History of Goodness Omogo Leadership Academy (GOLA)
+            </h2>
         </div>
 
-        <div class="pt-2">
-            <p class="font-semibold text-primary dark:text-gold">
-               Rev Sr Dr Uche Nwobi
-            </p>
-            <p class="italic">
-                Principal, Goodness Omogo Leadership Academy
-            </p>
-        </div>
+        <!-- First Half: Text Left, Image Right -->
+        <div class="grid lg:grid-cols-2 gap-16 items-center mb-20">
 
-    </div>
-</div>
+            <!-- Text Content - First Half -->
+            <div class="space-y-4 text-base text-slate-600 dark:text-slate-400 leading-relaxed">
+                <p>
+                    Goodness Omogo Leadership Academy was born from a vision of compassion, service, and leadership. Following the painful loss of Samuel Omogo in 2011, Rev. Fr. Dr. Peter Omogo began a mission to provide clean and safe drinking water to rural communities in Ebonyi State through the Samuel Omogo Foundation. What started with a single borehole project in Mater Dei Parish Umuoguduoshia grew into a movement that has provided over 500 boreholes across communities in the state.
+                </p>
+                <p>
+                    Built on the pillars of Water, Education, and Health, the Foundation later expanded its focus to education with the establishment of Goodness Omogo Leadership Academy (GOLA).
+                </p>
+                <p>
+                    The Academy was founded to provide holistic education that forms students academically, morally, spiritually, and socially. GOLA is committed to raising future leaders through excellence in academics, leadership training, technology, entrepreneurship, discipline, sports, and character formation.
+                </p>
+            </div>
+
+            <!-- Image Right -->
             <div class="relative">
                 <div class="bg-gradient-to-br from-gold/20 to-primary/20 rounded-3xl p-2">
-                    <img src="./asset/nwobi.jpeg" 
-                         alt="Our Campus" 
-                         class="w-full rounded-2xl shadow-2xl  object-cover">
+                    <img src="./asset/nwobi.jpeg"
+                         alt="GOLA Campus"
+                         class="w-full rounded-2xl shadow-2xl object-cover h-72 lg:h-80">
                 </div>
-                <div class="absolute -bottom-6 -left-6 bg-gold text-primary px-8 py-6 rounded-2xl shadow-xl">
-                    <p class="text-3xl font-display font-bold">15+</p>
-                    <p class="text-sm font-semibold uppercase">Years of Excellence</p>
+                <div class="absolute -bottom-4 -left-4 bg-gold text-primary px-5 py-3 rounded-2xl shadow-xl">
+                    <p class="text-2xl font-display font-bold">500+</p>
+                    <p class="text-xs font-semibold uppercase">Boreholes Drilled</p>
                 </div>
             </div>
+        </div>
+
+        <!-- Second Half: Image Left, Text Right -->
+        <div class="grid lg:grid-cols-2 gap-16 items-center">
+
+            <!-- Image Left -->
+            <div class="relative">
+                <div class="bg-gradient-to-br from-primary/20 to-gold/20 rounded-3xl p-2">
+                    <img src="./asset/school/image7.jpeg"
+                         alt="GOLA Students"
+                         class="w-full rounded-2xl shadow-2xl object-cover h-72 lg:h-80">
+                </div>
+                <div class="absolute -bottom-4 -right-4 bg-primary text-gold px-5 py-3 rounded-2xl shadow-xl">
+                    <p class="text-2xl font-display font-bold">Sept 2026</p>
+                    <p class="text-xs font-semibold uppercase">Academic Take-off</p>
+                </div>
+            </div>
+
+            <!-- Text Content - Second Half -->
+            <div class="space-y-4 text-base text-slate-600 dark:text-slate-400 leading-relaxed">
+                <p>
+                    Located in Ebonyi State, the school features modern classrooms, hostels, administrative facilities, staff quarters, and other essential structures designed to create a safe and inspiring learning environment.
+                </p>
+                <p>
+                    As the Academy prepares for its official academic take-off in September 2026, GOLA remains dedicated to its mission of nurturing every child to learn, grow, and lead with integrity and purpose.
+                </p>
+                <p>
+                    We sincerely appreciate our dedicated Board Members and generous donors from the United States, as well as our Advisory Board Members and volunteers in Nigeria, for their unwavering support, sacrifices, encouragement, prayers, and financial assistance toward this vision. Your generosity and commitment have played a vital role in bringing this dream to reality and restoring hope to many lives.
+                </p>
+
+                <!-- Motto -->
+                <div class="bg-primary/5 dark:bg-gold/10 border-l-4 border-gold px-6 py-4 rounded-r-2xl mt-4">
+                    <p class="font-bold text-primary dark:text-gold uppercase tracking-widest text-sm mb-2">Our Motto</p>
+                    <p class="text-2xl font-display font-black text-primary dark:text-gold">To Learn &bull; To Grow &bull; To Lead</p>
+                </div>
+
+                <!-- Signature -->
+                <div class="pt-4">
+                    <p class="font-display text-xl font-bold text-primary dark:text-gold">Rev. Fr. Dr. Peter Omogo</p>
+                    <p class="italic text-slate-500 dark:text-slate-400">Administrator, Goodness Omogo Leadership Academy</p>
+                </div>
+            </div>
+
         </div>
     </div>
 </section>
@@ -484,17 +507,21 @@ lightbox.addEventListener('click', (e) => {
             
             <!-- Vice Principal Admin -->
             <div class="bg-white dark:bg-slate-800 rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all group">
-                <div class="h-64 bg-gradient-to-br from-blue-600 to-blue-800"></div>
+                <div class="h-64 bg-gradient-to-br from-blue-600 to-blue-800">
+                    <img src="./asset/Igwe.jpeg" 
+                         alt="Principal" 
+                         class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500">
+                </div>
                 <div class="p-6 text-center">
-                    <h3 class="text-xl font-bold text-primary dark:text-gold mb-1">Mr. Chukwuma Okafor</h3>
-                    <p class="text-sm text-gold mb-3">Vice Principal (Administration)</p>
+                    <h3 class="text-xl font-bold text-primary dark:text-gold mb-1">Dr. Mrs. Igwe Rosemary Ozioma</h3>
+                    <p class="text-sm text-gold mb-3">Senior Lecturer, Ebonyi State University </p>
                     <p class="text-sm text-slate-600 dark:text-slate-400">
-                        M.Ed. in Educational Management
+                        CEO- Agro Livestock Farms.
                     </p>
                 </div>
             </div>
             
-            <!-- Dean of Students -->
+            <!-- Dean of Students 
             <div class="bg-white dark:bg-slate-800 rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all group">
                 <div class="h-64 bg-gradient-to-br from-green-600 to-green-800"></div>
                 <div class="p-6 text-center">
@@ -502,6 +529,96 @@ lightbox.addEventListener('click', (e) => {
                     <p class="text-sm text-gold mb-3">Dean of Students</p>
                     <p class="text-sm text-slate-600 dark:text-slate-400">
                         M.A. in Counseling Psychology
+                    </p>
+                </div>
+            </div>-->
+            
+        </div>
+    </div>
+</section>
+
+<!-- Leadership Team -->
+<section class="py-20 bg-slate-50 dark:bg-slate-900">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="text-center mb-16">
+            <h2 class="text-4xl font-display font-black text-primary dark:text-gold mb-4">Meet Our Advisory Board</h2>
+            <p class="text-slate-600 dark:text-slate-400 max-w-3xl mx-auto">Distinguished professionals providing strategic guidance and support to the growth and excellence of Goodness Omogo Leadership Academy.</p>
+        </div>
+        
+        <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+            
+            <!-- Principal -->
+            <div class="bg-white dark:bg-slate-800 rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all group">
+                <div class="h-64 bg-gradient-to-br from-primary to-slate-700 overflow-hidden">
+                    <img src="./asset/Alieze.jpeg" 
+                         alt="Principal" 
+                         class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500">
+                </div>
+                <div class="p-6 text-center">
+                    <h3 class="text-xl font-bold text-primary dark:text-gold mb-1">Alieze Blessing Ukamaka</h3>
+                   
+                    <p class="text-sm text-slate-600 dark:text-slate-400">
+                        Advisory Board Member
+                    </p>
+                </div>
+            </div>
+            
+            <!-- Vice Principal -->
+            <div class="bg-white dark:bg-slate-800 rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all group">
+                <div class="h-64 bg-gradient-to-br from-gold to-amber-700">
+                    <img src="./asset/Cynthia.jpeg" 
+                         alt="Principal" 
+                         class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500">
+                </div>
+                <div class="p-6 text-center">
+                    <h3 class="text-xl font-bold text-primary dark:text-gold mb-1">Eze Happiness Cynthia</h3>
+                    <p class="text-sm text-slate-600 dark:text-slate-400">
+                        Advisory Board Member
+                    </p>
+                  
+                </div>
+            </div>
+            
+            <!-- Vice Principal Admin -->
+            <div class="bg-white dark:bg-slate-800 rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all group">
+                <div class="h-64 bg-gradient-to-br from-blue-600 to-blue-800">
+                    <img src="./asset/Chinwendu.jpeg" 
+                         alt="Principal" 
+                         class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500">
+                </div>
+                <div class="p-6 text-center">
+                    <h3 class="text-xl font-bold text-primary dark:text-gold mb-1">Eze Cynthia Chinwendu</h3>
+                    <p class="text-sm text-slate-600 dark:text-slate-400">
+                        Advisory Board Member
+                    </p>
+                    
+                </div>
+            </div>
+            
+            <!-- Dean of Students -->
+            <div class="bg-white dark:bg-slate-800 rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all group">
+                <div class="h-64 bg-gradient-to-br from-green-600 to-green-800">
+                    <img src="./asset/Alike.jpeg" 
+                         alt="Principal" 
+                         class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500">
+                </div>
+                <div class="p-6 text-center">
+                    <h3 class="text-xl font-bold text-primary dark:text-gold mb-1">Hon. Isaac Alike</h3>
+                    <p class="text-sm text-slate-600 dark:text-slate-400">
+                        Advisory Board Member
+                    </p>
+                </div>
+            </div>
+                        <div class="bg-white dark:bg-slate-800 rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all group">
+                <div class="h-64 bg-gradient-to-br from-green-600 to-green-800">
+                    <img src="./asset/IDENYI.jpeg" 
+                         alt="Principal" 
+                         class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500">
+                </div>
+                <div class="p-6 text-center">
+                    <h3 class="text-xl font-bold text-primary dark:text-gold mb-1">NWEKE CORNELIUS IDENYNWEKE </h3>
+                    <p class="text-sm text-slate-600 dark:text-slate-400">
+                        Advisory Board Member
                     </p>
                 </div>
             </div>
