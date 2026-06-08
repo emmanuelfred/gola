@@ -483,9 +483,7 @@ lightbox.addEventListener('click', (e) => {
                 <div class="p-6 text-center">
                     <h3 class="text-xl font-bold text-primary dark:text-gold mb-1">Rev. Fr. Dr. Peter Okwoeze Omogo</h3>
                     <p class="text-sm text-gold mb-3">Founder</p>
-                    <p class="text-sm text-slate-600 dark:text-slate-400">
-                        Ph.D. in Educational Leadership
-                    </p>
+                   
                 </div>
             </div>
             
@@ -499,9 +497,7 @@ lightbox.addEventListener('click', (e) => {
                 <div class="p-6 text-center">
                     <h3 class="text-xl font-bold text-primary dark:text-gold mb-1">Rev Sr Dr Uche Nwobi</h3>
                     <p class="text-sm text-gold mb-3">Principal (Academics)</p>
-                    <p class="text-sm text-slate-600 dark:text-slate-400">
-                        Ed.D. in Curriculum Development
-                    </p>
+                   
                 </div>
             </div>
             
@@ -514,10 +510,8 @@ lightbox.addEventListener('click', (e) => {
                 </div>
                 <div class="p-6 text-center">
                     <h3 class="text-xl font-bold text-primary dark:text-gold mb-1">Dr. Mrs. Igwe Rosemary Ozioma</h3>
-                    <p class="text-sm text-gold mb-3">Senior Lecturer, Ebonyi State University </p>
-                    <p class="text-sm text-slate-600 dark:text-slate-400">
-                        CEO- Agro Livestock Farms.
-                    </p>
+                    <p class="text-sm text-gold mb-3">Senior Lecturer, Ebonyi State University, CEO- Agro Livestock Farms. </p>
+                   
                 </div>
             </div>
             
@@ -546,6 +540,20 @@ lightbox.addEventListener('click', (e) => {
         </div>
         
         <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+              <!-- Vice Principal Admin -->
+            <div class="bg-white dark:bg-slate-800 rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all group">
+                <div class="h-64 bg-gradient-to-br from-blue-600 to-blue-800">
+                    <img src="./asset/Igwe.jpeg" 
+                         alt="Principal" 
+                         class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500">
+                </div>
+                <div class="p-6 text-center">
+                    <h3 class="text-xl font-bold text-primary dark:text-gold mb-1">Dr. Mrs. Igwe Rosemary Ozioma</h3>
+                    <p class="text-sm text-gold mb-3">Senior Lecturer, Ebonyi State University, CEO- Agro Livestock Farms. </p>
+                   
+                </div>
+            </div>
+            
             
             <!-- Principal -->
             <div class="bg-white dark:bg-slate-800 rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all group">

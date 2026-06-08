@@ -312,7 +312,7 @@ include 'includes/header.php';
             </div>
             <div class="relative">
                 <div class="bg-gradient-to-br from-gold/20 to-primary/20 rounded-3xl p-3 transform rotate-2 shadow-2xl">
-                    <img src="./asset/courses-5.jpg" alt="Classroom" class="w-full rounded-2xl shadow-xl transform -rotate-2">
+                    <img src="./asset/philosophy.jpeg" alt="Classroom" class="w-full rounded-2xl shadow-xl transform -rotate-2">
                 </div>
             </div>
         </div>

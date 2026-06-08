@@ -154,15 +154,17 @@ include 'includes/header.php';
                         <img src="./asset/school/image1.jpeg" alt="GOLA Campus" class="w-full h-full object-cover">
                     </div>
                     <div class="bg-gradient-to-br from-green-500 to-green-700 rounded-2xl p-6 aspect-square flex flex-col items-center justify-center text-white">
-                        <span class="material-symbols-outlined text-5xl mb-2">diversity_3</span>
-                        <p class="font-bold text-center text-sm">Diverse Community</p>
+                        <!--<span class="material-symbols-outlined text-5xl mb-2">diversity_3</span>
+                        <p class="font-bold text-center text-sm">Diverse Community</p>-->
+                         <img src="./asset/gola.jpeg" alt="GOLA Students" class="w-full h-full object-cover">
                     </div>
                 </div>
                 <div class="space-y-4 pt-8">
                     <div class="bg-gradient-to-br from-primary to-slate-700 rounded-2xl p-6 aspect-square flex flex-col items-center justify-center text-white">
-                        <span class="material-symbols-outlined text-5xl mb-2">school</span>
+                        <!--<span class="material-symbols-outlined text-5xl mb-2">school</span>
                         <p class="font-bold text-center">Campus Life</p>
-                        <p class="text-xs text-slate-300 mt-1 text-center">Excellence in Education</p>
+                        <p class="text-xs text-slate-300 mt-1 text-center">Excellence in Education</p>-->
+                        <img src="./asset/com.jpeg" alt="GOLA Students" class="w-full h-full object-cover">
                     </div>
                     <div class="bg-slate-200 dark:bg-slate-700 rounded-2xl overflow-hidden aspect-[4/3]">
                         <img src="./asset/school/image2.jpeg" alt="GOLA Students" class="w-full h-full object-cover">
