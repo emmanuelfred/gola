@@ -74,9 +74,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $student_type = in_array($_POST['student_type'] ?? 'Boarding', ['Boarding','Day'])
                         ? $_POST['student_type'] : 'Boarding';
 
-        $app = $conn->query("SELECT * FROM admissions_applications WHERE id=$app_id AND status='Admitted'")->fetch_assoc();
+        $app = $conn->query("SELECT * FROM admissions_applications WHERE id=$app_id AND status NOT IN ('Rejected','Enrolled')")->fetch_assoc();
         if (!$app) {
-            $error = 'Application not found or not yet set to Admitted.';
+            $error = 'Application not found or already enrolled/rejected.';
         } else {
             // Generate Student ID
             $year  = date('Y');
@@ -355,7 +355,7 @@ if (isset($_GET['view'])) {
         </div>
 
         <!-- Enrol -->
-        <?php if ($view_app['status'] === 'Admitted' && !$view_app['enrolled_as_student_id'] && hasPermission('admin')): ?>
+        <?php if (!in_array($view_app['status'], ['Rejected','Enrolled']) && !$view_app['enrolled_as_student_id'] && hasPermission('admin')): ?>
         <div class="bg-green-50 border border-green-200 rounded-xl p-5">
             <h3 class="font-bold text-green-800 mb-1">Enrol This Student</h3>
             <p class="text-xs text-green-700 mb-4">This will create a student record and assign them to a class.</p>
@@ -513,10 +513,23 @@ if (isset($_GET['view'])) {
                     </td>
                     <td class="px-4 py-3 text-center text-xs text-slate-400"><?php echo date('d M Y', strtotime($app['created_at'])); ?></td>
                     <td class="px-4 py-3 text-center">
-                        <a href="?view=<?php echo $app['id']; ?>"
-                            class="inline-flex items-center gap-1 px-3 py-1.5 bg-primary text-white text-xs font-semibold rounded-lg hover:bg-primary/90">
-                            <span class="material-symbols-outlined text-xs">visibility</span>Review
-                        </a>
+                        <div class="flex items-center justify-center gap-2">
+                            <a href="?view=<?php echo $app['id']; ?>"
+                                class="inline-flex items-center gap-1 px-3 py-1.5 bg-primary text-white text-xs font-semibold rounded-lg hover:bg-primary/90">
+                                <span class="material-symbols-outlined text-xs">visibility</span>Review
+                            </a>
+                            <?php if (!in_array($app['status'], ['Rejected','Enrolled'])): ?>
+                            <button onclick="openEnrolModal(<?php echo $app['id']; ?>, '<?php echo htmlspecialchars(addslashes($app['full_name'])); ?>', '<?php echo htmlspecialchars(addslashes($app['application_no'])); ?>')"
+                                class="inline-flex items-center gap-1 px-3 py-1.5 bg-green-600 text-white text-xs font-semibold rounded-lg hover:bg-green-700 transition-all">
+                                <span class="material-symbols-outlined text-xs">person_add</span>Enrol
+                            </button>
+                            <?php elseif ($app['status'] === 'Enrolled'): ?>
+                            <a href="?view=<?php echo $app['id']; ?>"
+                                class="inline-flex items-center gap-1 px-3 py-1.5 bg-primary/10 text-primary text-xs font-semibold rounded-lg">
+                                <span class="material-symbols-outlined text-xs">verified</span>Enrolled
+                            </a>
+                            <?php endif; ?>
+                        </div>
                     </td>
                 </tr>
                 <?php endwhile; ?>
@@ -529,5 +542,81 @@ if (isset($_GET['view'])) {
 </main>
 </div>
 </div>
+
+<!-- ══ QUICK ENROL MODAL ══ -->
+<div id="enrolModal" class="hidden fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+<div class="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+    <div class="bg-green-700 rounded-t-2xl px-6 py-5 flex items-center justify-between">
+        <div>
+            <h2 class="text-white font-bold text-lg">Enrol Student</h2>
+            <p class="text-green-200 text-xs mt-0.5" id="enrolModalName">—</p>
+        </div>
+        <button onclick="document.getElementById('enrolModal').classList.add('hidden')" class="text-white/60 hover:text-white">
+            <span class="material-symbols-outlined">close</span>
+        </button>
+    </div>
+    <form method="POST" class="p-6 space-y-4">
+        <input type="hidden" name="action" value="enrol">
+        <input type="hidden" name="app_id" id="enrolAppId">
+
+        <!-- App no display -->
+        <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 text-center">
+            <p class="text-xs text-slate-400 font-semibold uppercase tracking-wider mb-1">Application Number</p>
+            <p class="font-black font-mono text-primary text-lg" id="enrolAppNo">—</p>
+        </div>
+
+        <div>
+            <label class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 block">Assign to Class <span class="text-red-500">*</span></label>
+            <select name="class_id" required class="w-full border-slate-200 rounded-xl text-sm focus:ring-green-400 focus:border-green-400 px-3 py-2.5">
+                <option value="">Select Class</option>
+                <?php $classes->data_seek(0); while($cls=$classes->fetch_assoc()): ?>
+                <option value="<?php echo $cls['id']; ?>"><?php echo htmlspecialchars($cls['class_name'].' '.$cls['arm']); ?></option>
+                <?php endwhile; ?>
+            </select>
+        </div>
+
+        <div>
+            <label class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 block">Student Type</label>
+            <div class="flex gap-3">
+                <label class="flex-1 flex items-center justify-center gap-2 border-2 border-slate-200 rounded-xl py-3 cursor-pointer hover:border-green-400 transition-all has-[:checked]:border-green-500 has-[:checked]:bg-green-50">
+                    <input type="radio" name="student_type" value="Boarding" checked class="text-green-600">
+                    <span class="font-semibold text-sm text-slate-700">Boarding</span>
+                </label>
+                <label class="flex-1 flex items-center justify-center gap-2 border-2 border-slate-200 rounded-xl py-3 cursor-pointer hover:border-green-400 transition-all has-[:checked]:border-green-500 has-[:checked]:bg-green-50">
+                    <input type="radio" name="student_type" value="Day" class="text-green-600">
+                    <span class="font-semibold text-sm text-slate-700">Day</span>
+                </label>
+            </div>
+        </div>
+
+        <p class="text-xs text-slate-400 flex items-center gap-1.5">
+            <span class="material-symbols-outlined text-sm text-green-600">info</span>
+            All application data (personal info, health, parents) will be copied to the student record automatically.
+        </p>
+
+        <div class="flex gap-3 pt-2">
+            <button type="submit"
+                onclick="return confirm('Enrol this applicant as a student? This cannot be undone.')"
+                class="flex-1 bg-green-600 text-white py-3 rounded-xl font-bold text-sm hover:bg-green-700 transition-all flex items-center justify-center gap-2">
+                <span class="material-symbols-outlined text-sm">person_add</span>Enrol Student
+            </button>
+            <button type="button" onclick="document.getElementById('enrolModal').classList.add('hidden')"
+                class="flex-1 bg-slate-100 text-slate-700 py-3 rounded-xl font-bold text-sm hover:bg-slate-200 transition-all">Cancel</button>
+        </div>
+    </form>
+</div>
+</div>
+
+<script>
+function openEnrolModal(appId, name, appNo) {
+    document.getElementById('enrolAppId').value  = appId;
+    document.getElementById('enrolModalName').textContent = name;
+    document.getElementById('enrolAppNo').textContent     = appNo;
+    document.getElementById('enrolModal').classList.remove('hidden');
+}
+document.getElementById('enrolModal').addEventListener('click', function(e) {
+    if (e.target === this) this.classList.add('hidden');
+});
+</script>
 </body>
 </html>
