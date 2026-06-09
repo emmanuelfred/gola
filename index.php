@@ -248,10 +248,10 @@ include 'includes/header.php';
                     <span class="text-gold text-sm font-semibold uppercase tracking-widest">Visionary Leadership</span>
                 </div>
                 <h2 class="text-4xl lg:text-5xl font-display font-black text-primary dark:text-gold leading-tight">
-                    Brief Biography of Rev. Fr. Dr. Okwoeze Omogo
+                    Brief Biography of Rev. Fr. Dr. Okwoeze Peter Omogo
                 </h2>
                 <p class="text-base text-slate-600 dark:text-slate-400 leading-relaxed">
-                    Rev. Fr. Dr. Okwueze Omogo is a Catholic priest, educator, humanitarian, and visionary leader from Umuogudu Oshia Ngbo in Ebonyi State, Nigeria. Ordained on July 10, 2004, he has dedicated his life to pastoral service, education, and community development.
+                    Rev. Fr. Dr. Okwoeze Peter Omogo is a Catholic priest, educator, humanitarian, and visionary leader from Umuogudu Oshia Ngbo in Ebonyi State, Nigeria. Ordained on July 10, 2004, he has dedicated his life to pastoral service, education, and community development.
                 </p>
                 <p class="text-base text-slate-600 dark:text-slate-400 leading-relaxed">
                     He studied at St. Augustine's Seminary, Ezzamgbo, Bigard Memorial Seminary, Enugu, the Pontifical Urban University in Rome, Franciscan University of Steubenville, Ohio, and Concordia University, Chicago, where he earned his Ph.D.
@@ -263,7 +263,7 @@ include 'includes/header.php';
                     His life is guided by the belief that <span class="italic font-semibold text-primary dark:text-gold">"A life without legacy is a fruitless life."</span>
                 </p>
                 <div class="pt-4">
-                    <p class="font-display text-2xl text-primary dark:text-gold font-bold">Rev. Fr. Dr. Okwueze Omogo</p>
+                    <p class="font-display text-2xl text-primary dark:text-gold font-bold">Rev. Fr. Dr. Okwoeze Peter Omogo</p>
                     <p class="text-slate-500 dark:text-slate-400 italic">Founder</p>
                 </div>
             </div>

@@ -502,20 +502,10 @@ lightbox.addEventListener('click', (e) => {
             </div>
             
             <!-- Vice Principal Admin -->
-            <div class="bg-white dark:bg-slate-800 rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all group">
-                <div class="h-64 bg-gradient-to-br from-blue-600 to-blue-800">
-                    <img src="./asset/Igwe.jpeg" 
-                         alt="Principal" 
-                         class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500">
-                </div>
-                <div class="p-6 text-center">
-                    <h3 class="text-xl font-bold text-primary dark:text-gold mb-1">Dr. Mrs. Igwe Rosemary Ozioma</h3>
-                    <p class="text-sm text-gold mb-3">Senior Lecturer, Ebonyi State University, CEO- Agro Livestock Farms. </p>
-                   
-                </div>
-            </div>
             
-            <!-- Dean of Students 
+                 <!-- Dean of Students 
+            
+           
             <div class="bg-white dark:bg-slate-800 rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all group">
                 <div class="h-64 bg-gradient-to-br from-green-600 to-green-800"></div>
                 <div class="p-6 text-center">
@@ -624,7 +614,7 @@ lightbox.addEventListener('click', (e) => {
                          class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500">
                 </div>
                 <div class="p-6 text-center">
-                    <h3 class="text-xl font-bold text-primary dark:text-gold mb-1">NWEKE CORNELIUS IDENYNWEKE </h3>
+                    <h3 class="text-xl font-bold text-primary dark:text-gold mb-1">NWEKE CORNELIUS IDENY</h3>
                     <p class="text-sm text-slate-600 dark:text-slate-400">
                         Advisory Board Member
                     </p>
