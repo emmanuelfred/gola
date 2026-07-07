@@ -665,7 +665,7 @@ lightbox.addEventListener('click', (e) => {
             <!-- Dean of Students -->
             <div class="bg-white dark:bg-slate-800 rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all group">
                 <div class="h-64 bg-gradient-to-br from-green-600 to-green-800">
-                    <img src="./asset/ogayi.jpeg" 
+                    <img src="./asset/Ogayi.jpeg" 
                          alt="Principal" 
                          class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500">
                 </div>
