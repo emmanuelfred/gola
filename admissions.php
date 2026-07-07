@@ -102,10 +102,10 @@ include 'includes/header.php';
                     <span class="material-symbols-outlined">edit_note</span>Start Online Application
                 </a>
                 <?php endif; ?>
-                <a href="#prospectus"
+                <!--<a href="#prospectus"
                     class="bg-white/10 hover:bg-white/20 backdrop-blur-sm border border-white/20 font-bold px-8 py-4 rounded-xl transition-all flex items-center justify-center gap-2">
                     <span class="material-symbols-outlined">description</span>Request Prospectus
-                </a>
+                </a>-->
             </div>
         </div>
     </div>
@@ -269,7 +269,7 @@ include 'includes/header.php';
                 </div>
 
                 <?php else: ?>
-                <!-- Request Form -->
+                <!-- Request Form 
                 <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-xl overflow-hidden">
                     <div class="bg-gradient-to-r from-primary to-[#0A3556] px-7 py-6">
                         <h3 class="text-white font-black text-xl">Request the GOLA Prospectus</h3>
@@ -347,7 +347,7 @@ include 'includes/header.php';
                             <p class="text-center text-xs text-slate-400">We'll email it to you within 24 hours. No spam, ever.</p>
                         </form>
                     </div>
-                </div>
+                </div>-->
                 <?php endif; ?>
             </div>
         </div>

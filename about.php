@@ -607,14 +607,70 @@ lightbox.addEventListener('click', (e) => {
                     </p>
                 </div>
             </div>
-                        <div class="bg-white dark:bg-slate-800 rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all group">
+             <div class="bg-white dark:bg-slate-800 rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all group">
                 <div class="h-64 bg-gradient-to-br from-green-600 to-green-800">
                     <img src="./asset/IDENYI.jpeg" 
                          alt="Principal" 
                          class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500">
                 </div>
                 <div class="p-6 text-center">
-                    <h3 class="text-xl font-bold text-primary dark:text-gold mb-1">NWEKE CORNELIUS IDENY</h3>
+                    <h3 class="text-xl font-bold text-primary dark:text-gold mb-1">NWEKE CORNELIUS IDENYI</h3>
+                    <p class="text-sm text-slate-600 dark:text-slate-400">
+                        Advisory Board Member
+                    </p>
+                </div>
+            </div>
+                    <!-- Dean of Students -->
+            <div class="bg-white dark:bg-slate-800 rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all group">
+                <div class="h-64 bg-gradient-to-br from-green-600 to-green-800">
+                    <img src="./asset/treasure.jpeg" 
+                         alt="Principal" 
+                         class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500">
+                </div>
+                <div class="p-6 text-center">
+                    <h3 class="text-xl font-bold text-primary dark:text-gold mb-1">Barr Treasure Obiomachukwu.</h3>
+                    <p class="text-sm text-slate-600 dark:text-slate-400">
+                        Advisory Board Member
+                    </p>
+                </div>
+            </div>
+                    <!-- Dean of Students -->
+            <div class="bg-white dark:bg-slate-800 rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all group">
+                <div class="h-64 bg-gradient-to-br from-green-600 to-green-800">
+                    <img src="./asset/Umeh.jpeg" 
+                         alt="Principal" 
+                         class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500">
+                </div>
+                <div class="p-6 text-center">
+                    <h3 class="text-xl font-bold text-primary dark:text-gold mb-1">Dr George Umeh</h3>
+                    <p class="text-sm text-slate-600 dark:text-slate-400">
+                        Advisory Board Member
+                    </p>
+                </div>
+            </div>
+                    <!-- Dean of Students -->
+            <div class="bg-white dark:bg-slate-800 rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all group">
+                <div class="h-64 bg-gradient-to-br from-green-600 to-green-800">
+                    <img src="./asset/ogba.jpeg" 
+                         alt="Principal" 
+                         class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500">
+                </div>
+                <div class="p-6 text-center">
+                    <h3 class="text-xl font-bold text-primary dark:text-gold mb-1">Theresa Chinwe Ogba</h3>
+                    <p class="text-sm text-slate-600 dark:text-slate-400">
+                        Advisory Board Member
+                    </p>
+                </div>
+            </div>
+            <!-- Dean of Students -->
+            <div class="bg-white dark:bg-slate-800 rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all group">
+                <div class="h-64 bg-gradient-to-br from-green-600 to-green-800">
+                    <img src="./asset/ogayi.jpeg" 
+                         alt="Principal" 
+                         class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500">
+                </div>
+                <div class="p-6 text-center">
+                    <h3 class="text-xl font-bold text-primary dark:text-gold mb-1">Mr Kenneth Ogayi</h3>
                     <p class="text-sm text-slate-600 dark:text-slate-400">
                         Advisory Board Member
                     </p>
