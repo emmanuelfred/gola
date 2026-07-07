@@ -77,19 +77,23 @@ include 'includes/header.php';
 <section id="calendar" class="py-16 bg-slate-50 dark:bg-slate-900">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
-        <!-- Header row -->
+        <!-- Header row 
         <div class="flex flex-wrap items-center justify-between gap-4 mb-10">
             <div>
                 <h2 class="text-3xl font-display font-black text-primary dark:text-gold">Academic Calendar</h2>
-                <p class="text-slate-500 dark:text-slate-400 mt-1"><?php echo htmlspecialchars($current_session); ?> Session</p>
+                <p class="text-slate-500 dark:text-slate-400 mt-1"><?php //echo htmlspecialchars($current_session); 
+                ?> Session</p>
             </div>
-            <?php if ($prospectus_file): ?>
-            <a href="uploads/prospectus/<?php echo htmlspecialchars($prospectus_file); ?>" target="_blank"
+            <?php //if ($prospectus_file): 
+                ?>
+            <a href="uploads/prospectus/<?php //echo htmlspecialchars($prospectus_file);
+             ?>" target="_blank"
                class="inline-flex items-center gap-2 bg-primary text-white px-6 py-3 rounded-xl font-semibold hover:bg-primary/90 transition-all shadow-md">
                 <span class="material-symbols-outlined">download</span>Download Prospectus PDF
             </a>
-            <?php endif; ?>
-        </div>
+            <?php //endif; 
+            ?>
+        </div>-->
 
         <?php if (empty($calendar_events)): ?>
         <!-- Fallback: no calendar events yet -->
