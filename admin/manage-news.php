@@ -1,6 +1,8 @@
 <?php
 require_once 'auth_check.php';
 
+require_once 'includes/permission_helper.php';
+requirePermission('content');
 // Handle delete action
 if (isset($_GET['delete'])) {
     $id = (int)$_GET['delete'];

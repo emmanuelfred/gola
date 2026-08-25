@@ -1,5 +1,9 @@
 <?php
 require_once 'auth_check.php';
+require_once 'includes/permission_helper.php';
+requirePermission('students');
+require_once 'includes/session_helper.php';
+require_once 'includes/enrollment_helper.php';
 $page_title = "Register Student";
 $errors = [];
 $success = '';
@@ -76,7 +80,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $bg = $_POST['blood_group'] ?? '';
         $gt = $_POST['genotype'] ?? '';
 
-        $stmt->bind_param("ssssssssssssssssississssssssssssssssssssssssssssssss",
+        $stmt->bind_param("ssssssssssssssssiissssssssssssssssssssssssssssssssss",
             $student_id, $first_name, $middle_name, $last_name, $passport_path, $gender, $dob,
             $_POST['state_of_origin'], $_POST['lga'], $_POST['nationality'], $_POST['religion'], $bg, $gt, $_POST['phone'], $_POST['email'],
             $adm_date, $class_id, $session_id, $_POST['status'], $_POST['student_type'],
@@ -90,7 +94,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         );
 
         if ($stmt->execute()) {
+            $new_student_db_id = $conn->insert_id;
             logActivity('register_student', 'Registered student: ' . $first_name . ' ' . $last_name . ' (' . $student_id . ')');
+
+            // Auto-enroll into the current session's class roster — a brand-new
+            // admission is obviously active in that class right now. This is the
+            // one case where enrollment happens automatically; from the NEXT
+            // session onward, re-registration goes through Class Roster by reg no.
+            $current_sess = getCurrentSession($conn);
+            if ($current_sess) {
+                enrollStudentInClass($conn, $new_student_db_id, $class_id, $current_sess['id'], $_SESSION['admin_id'] ?? null);
+            }
+
             $success = "Student registered successfully! Registration Number: <strong>" . $student_id . "</strong>";
         } else {
             $errors[] = 'Database error: ' . $conn->error;

@@ -1,5 +1,7 @@
 <?php
 require_once 'auth_check.php';
+require_once 'includes/permission_helper.php';
+requirePermission('students');
 $page_title = "Manage Students";
 
 // Handle delete

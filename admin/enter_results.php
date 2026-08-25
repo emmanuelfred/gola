@@ -1,5 +1,7 @@
 <?php
 require_once 'auth_check.php';
+require_once 'includes/permission_helper.php';
+requirePermission('results');
 $page_title = "Enter Results";
 
 $session_id = intval($_GET['session_id'] ?? $_POST['session_id'] ?? 0);
@@ -15,9 +17,15 @@ if (!$session_id || !$term_id || !$class_id || !$subject_id) {
 
 // ── Info lookups ──────────────────────────────────────────────────────────────
 $class_info   = $conn->query("SELECT class_name, arm FROM classes WHERE id=$class_id")->fetch_assoc();
-$subject_info = $conn->query("SELECT subject_name, subject_code FROM subjects WHERE id=$subject_id")->fetch_assoc();
+$subject_info = $conn->query("
+    SELECT s.subject_name, s.subject_code, cs.teacher_id, st.first_name as teacher_first, st.last_name as teacher_last
+    FROM subjects s
+    LEFT JOIN class_subjects cs ON cs.subject_id = s.id AND cs.class_id = $class_id
+    LEFT JOIN staff st ON st.id = cs.teacher_id
+    WHERE s.id=$subject_id
+")->fetch_assoc();
 $session_info = $conn->query("SELECT session_name FROM academic_sessions WHERE id=$session_id")->fetch_assoc();
-$term_names   = [1=>'First Term', 2=>'Second Term', 3=>'Third Term'];
+$term_info    = $conn->query("SELECT term_name FROM terms WHERE id=$term_id")->fetch_assoc();
 
 if (!$class_info || !$subject_info || !$session_info) {
     header('Location: manage_results.php');
@@ -177,12 +185,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_summary'])) {
     $tab = 'summary';
 }
 
+require_once 'includes/enrollment_helper.php';
+
 // ── Fetch students ────────────────────────────────────────────────────────────
+// Roster is session-scoped: only students actually registered into this class
+// for THIS session appear here (see class_roster.php), not just anyone whose
+// students.class_id happens to match.
 $students = $conn->query("
-    SELECT id, student_id, first_name, COALESCE(middle_name,'') AS middle_name, last_name
-    FROM students
-    WHERE class_id = $class_id AND status = 'Active'
-    ORDER BY last_name, first_name
+    SELECT s.id, s.student_id, s.first_name, COALESCE(s.middle_name,'') AS middle_name, s.last_name
+    FROM class_enrollments ce
+    JOIN students s ON s.id = ce.student_id
+    WHERE ce.class_id = $class_id AND ce.session_id = $session_id AND s.status = 'Active'
+    ORDER BY s.last_name, s.first_name
 ");
 
 // ── Existing scores ───────────────────────────────────────────────────────────
@@ -259,11 +273,15 @@ input:focus{outline:none;}
                 </span>
                 <span class="inline-flex items-center gap-1 px-3 py-1 bg-slate-100 text-slate-700 text-xs font-semibold rounded-full">
                     <span class="material-symbols-outlined text-xs">event_note</span>
-                    <?php echo htmlspecialchars($term_names[$term_id] ?? 'Term '.$term_id); ?>
+                    <?php echo htmlspecialchars($term_info['term_name'] ?? 'Term '.$term_id); ?>
                 </span>
                 <span class="inline-flex items-center gap-1 px-3 py-1 bg-blue-50 text-blue-700 text-xs font-semibold rounded-full">
                     <span class="material-symbols-outlined text-xs">tag</span>
                     <?php echo htmlspecialchars($subject_info['subject_code']); ?>
+                </span>
+                <span class="inline-flex items-center gap-1 px-3 py-1 <?php echo $subject_info['teacher_id'] ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-700'; ?> text-xs font-semibold rounded-full">
+                    <span class="material-symbols-outlined text-xs">person</span>
+                    <?php echo $subject_info['teacher_id'] ? htmlspecialchars($subject_info['teacher_first'].' '.$subject_info['teacher_last']) : 'No teacher assigned'; ?>
                 </span>
             </div>
         </div>

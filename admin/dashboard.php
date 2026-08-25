@@ -1,5 +1,6 @@
 <?php
 require_once 'auth_check.php';
+require_once 'includes/session_helper.php';
 
 // Fetch statistics
 $stats = [];
@@ -21,11 +22,8 @@ $result = $conn->query("SELECT COUNT(*) as total FROM news_articles WHERE is_pub
 $stats['total_news'] = $result->fetch_assoc()['total'];
 
 // Current session and term
-$result = $conn->query("SELECT session_name FROM academic_sessions WHERE is_current = TRUE LIMIT 1");
-$current_session = $result->fetch_assoc();
-
-$result = $conn->query("SELECT term_name FROM terms WHERE is_current = TRUE LIMIT 1");
-$current_term = $result->fetch_assoc();
+$current_session = getCurrentSession($conn);
+$current_term    = getCurrentTerm($conn);
 
 // Recent activities
 $activities_stmt = $conn->prepare("

@@ -1,5 +1,8 @@
 <?php
 require_once 'auth_check.php';
+require_once 'includes/permission_helper.php';
+requirePermission('results');
+require_once 'includes/staff_helper.php';
 $page_title = "Manage Class Subjects";
 
 $success = '';
@@ -8,15 +11,29 @@ $error   = '';
 // ── Handle actions ─────────────────────────────────────────────────────────────
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
-    // Assign a subject to a class
+    // Assign a subject to a class (optionally with a teacher right away)
     if ($_POST['action'] === 'assign') {
         $class_id   = intval($_POST['class_id'] ?? 0);
         $subject_id = intval($_POST['subject_id'] ?? 0);
+        $teacher_id = intval($_POST['teacher_id'] ?? 0) ?: null;
         if ($class_id && $subject_id) {
-            $stmt = $conn->prepare("INSERT IGNORE INTO class_subjects (class_id, subject_id) VALUES (?,?)");
-            $stmt->bind_param("ii", $class_id, $subject_id);
+            $stmt = $conn->prepare("INSERT IGNORE INTO class_subjects (class_id, subject_id, teacher_id) VALUES (?,?,?)");
+            $stmt->bind_param("iii", $class_id, $subject_id, $teacher_id);
             $stmt->execute();
             $success = "Subject assigned to class.";
+        }
+    }
+
+    // Assign / change the teacher for an already-assigned class subject
+    if ($_POST['action'] === 'assign_teacher') {
+        $class_id   = intval($_POST['class_id'] ?? 0);
+        $subject_id = intval($_POST['subject_id'] ?? 0);
+        $teacher_id = intval($_POST['teacher_id'] ?? 0) ?: null;
+        if ($class_id && $subject_id) {
+            $stmt = $conn->prepare("UPDATE class_subjects SET teacher_id=? WHERE class_id=? AND subject_id=?");
+            $stmt->bind_param("iii", $teacher_id, $class_id, $subject_id);
+            $stmt->execute();
+            $success = $teacher_id ? "Teacher assigned." : "Teacher unassigned.";
         }
     }
 
@@ -77,14 +94,18 @@ $assigned = [];
 if ($selected_class) {
     $q = $conn->query("
         SELECT s.id, s.subject_code, s.subject_name, s.category, s.is_active,
+               cs.teacher_id, st.first_name as t_first, st.last_name as t_last,
                (SELECT COUNT(*) FROM results r WHERE r.class_id=$selected_class AND r.subject_id=s.id) as result_count
         FROM class_subjects cs
         JOIN subjects s ON s.id = cs.subject_id
+        LEFT JOIN staff st ON st.id = cs.teacher_id
         WHERE cs.class_id = $selected_class
         ORDER BY s.subject_name
     ");
     while ($r = $q->fetch_assoc()) $assigned[] = $r;
 }
+
+$assignable_staff = getAssignableStaff($conn);
 
 // All subjects NOT yet assigned to the selected class
 $available = [];
@@ -112,6 +133,11 @@ $all_subjects = $conn->query("
 $class_counts = [];
 $ccq = $conn->query("SELECT class_id, COUNT(*) as c FROM class_subjects GROUP BY class_id");
 while ($r = $ccq->fetch_assoc()) $class_counts[$r['class_id']] = $r['c'];
+
+// Classes missing a teacher on one or more assigned subjects (for the quick warning badge)
+$class_missing_teacher = [];
+$mtq = $conn->query("SELECT class_id, COUNT(*) as c FROM class_subjects WHERE teacher_id IS NULL GROUP BY class_id");
+while ($r = $mtq->fetch_assoc()) $class_missing_teacher[$r['class_id']] = $r['c'];
 
 $active_tab = $_GET['tab'] ?? 'classes';
 ?>
@@ -212,6 +238,9 @@ $active_tab = $_GET['tab'] ?? 'classes';
                         <span class="font-semibold text-sm <?php echo $selected_class===$cls['id'] ? 'text-primary' : 'text-slate-700'; ?>">
                             <?php echo htmlspecialchars($cls['class_name'].' '.$cls['arm']); ?>
                         </span>
+                        <?php if (!empty($class_missing_teacher[$cls['id']])): ?>
+                        <span class="material-symbols-outlined text-sm text-amber-500" title="<?php echo $class_missing_teacher[$cls['id']]; ?> subject(s) missing a teacher">warning</span>
+                        <?php endif; ?>
                     </div>
                     <span class="text-xs px-2 py-0.5 rounded-full font-semibold
                                  <?php echo isset($class_counts[$cls['id']]) ? 'bg-primary/10 text-primary' : 'bg-slate-100 text-slate-400'; ?>">
@@ -233,6 +262,7 @@ $active_tab = $_GET['tab'] ?? 'classes';
         </div>
         <?php else:
             $sel_class = array_values(array_filter($classes, fn($c)=>$c['id']==$selected_class))[0] ?? null;
+            $unassigned_count = count(array_filter($assigned, fn($s) => !$s['teacher_id']));
         ?>
 
         <!-- Class header -->
@@ -245,6 +275,9 @@ $active_tab = $_GET['tab'] ?? 'classes';
                     <?php echo count($assigned); ?> subject(s) assigned
                     <?php if (count($available) > 0): ?>
                     · <?php echo count($available); ?> more available to add
+                    <?php endif; ?>
+                    <?php if ($unassigned_count > 0): ?>
+                    · <span class="text-amber-300 font-semibold"><?php echo $unassigned_count; ?> need a teacher</span>
                     <?php endif; ?>
                 </p>
             </div>
@@ -285,6 +318,7 @@ $active_tab = $_GET['tab'] ?? 'classes';
                             <th class="px-4 py-2.5 text-left font-semibold text-slate-500 uppercase">Code</th>
                             <th class="px-4 py-2.5 text-left font-semibold text-slate-500 uppercase">Subject</th>
                             <th class="px-4 py-2.5 text-center font-semibold text-slate-500 uppercase">Type</th>
+                            <th class="px-4 py-2.5 text-left font-semibold text-slate-500 uppercase">Teacher</th>
                             <th class="px-4 py-2.5 text-center font-semibold text-slate-500 uppercase">Results</th>
                             <th class="px-4 py-2.5 text-center font-semibold text-slate-500 uppercase">Remove</th>
                         </tr>
@@ -299,6 +333,22 @@ $active_tab = $_GET['tab'] ?? 'classes';
                             <td class="px-4 py-2.5 font-semibold text-slate-800"><?php echo htmlspecialchars($sub['subject_name']); ?></td>
                             <td class="px-4 py-2.5 text-center">
                                 <span class="px-2 py-0.5 rounded-full text-xs font-semibold <?php echo $cc; ?>"><?php echo $sub['category']; ?></span>
+                            </td>
+                            <td class="px-4 py-2.5">
+                                <form method="POST" class="flex items-center gap-1">
+                                    <input type="hidden" name="action"     value="assign_teacher">
+                                    <input type="hidden" name="class_id"   value="<?php echo $selected_class; ?>">
+                                    <input type="hidden" name="subject_id" value="<?php echo $sub['id']; ?>">
+                                    <select name="teacher_id" onchange="this.form.submit()"
+                                        class="text-xs border-slate-200 rounded-lg focus:ring-gold focus:border-gold py-1.5 <?php echo $sub['teacher_id'] ? 'text-slate-800 font-medium' : 'text-amber-600'; ?>">
+                                        <option value="">— No teacher assigned —</option>
+                                        <?php foreach ($assignable_staff as $t): ?>
+                                        <option value="<?php echo $t['id']; ?>" <?php echo $sub['teacher_id']==$t['id']?'selected':''; ?>>
+                                            <?php echo htmlspecialchars($t['first_name'].' '.$t['last_name']); ?> — <?php echo htmlspecialchars($t['role_name']); ?>
+                                        </option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </form>
                             </td>
                             <td class="px-4 py-2.5 text-center text-xs <?php echo $sub['result_count']>0 ? 'font-bold text-primary' : 'text-slate-300'; ?>">
                                 <?php echo $sub['result_count'] > 0 ? $sub['result_count'] : '—'; ?>
@@ -353,6 +403,15 @@ $active_tab = $_GET['tab'] ?? 'classes';
                             <?php echo htmlspecialchars($av['subject_name'].' ('.$av['subject_code'].')'); ?>
                         </option>
                         <?php endforeach; if ($current_cat) echo '</optgroup>'; ?>
+                    </select>
+                </div>
+                <div class="flex-1 min-w-48">
+                    <label class="text-xs font-semibold text-slate-500 mb-1 block">Teacher <span class="text-slate-400 font-normal">(optional — can set later)</span></label>
+                    <select name="teacher_id" class="w-full border-slate-200 rounded-lg text-sm focus:ring-gold focus:border-gold">
+                        <option value="">— Assign later —</option>
+                        <?php foreach ($assignable_staff as $t): ?>
+                        <option value="<?php echo $t['id']; ?>"><?php echo htmlspecialchars($t['first_name'].' '.$t['last_name']); ?> — <?php echo htmlspecialchars($t['role_name']); ?></option>
+                        <?php endforeach; ?>
                     </select>
                 </div>
                 <button type="submit"

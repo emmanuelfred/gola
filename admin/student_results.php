@@ -1,5 +1,8 @@
 <?php
 require_once 'auth_check.php';
+require_once 'includes/permission_helper.php';
+requirePermission('results');
+require_once 'includes/enrollment_helper.php';
 $page_title = "Class Results";
 
 $session_id = intval($_GET['session_id'] ?? 0);
@@ -13,7 +16,7 @@ if (!$session_id || !$term_id || !$class_id) {
 
 $class_info   = $conn->query("SELECT class_name, arm FROM classes WHERE id=$class_id")->fetch_assoc();
 $session_info = $conn->query("SELECT session_name FROM academic_sessions WHERE id=$session_id")->fetch_assoc();
-$term_names   = [1=>'First Term', 2=>'Second Term', 3=>'Third Term'];
+$term_info    = $conn->query("SELECT term_name FROM terms WHERE id=$term_id")->fetch_assoc();
 
 if (!$class_info || !$session_info) { header('Location: manage_results.php'); exit; }
 
@@ -21,12 +24,14 @@ if (!$class_info || !$session_info) { header('Location: manage_results.php'); ex
 $total_subjects_row = $conn->query("SELECT COUNT(*) as c FROM class_subjects WHERE class_id=$class_id")->fetch_assoc();
 $total_subjects = intval($total_subjects_row['c']);
 
-// Fetch all active students in this class
+// Fetch students registered into this class for THIS session (session-scoped roster,
+// not everyone whose students.class_id happens to match)
 $students = $conn->query("
-    SELECT id, student_id, first_name, COALESCE(middle_name,'') AS middle_name, last_name, gender
-    FROM students
-    WHERE class_id=$class_id AND status='Active'
-    ORDER BY last_name, first_name
+    SELECT s.id, s.student_id, s.first_name, COALESCE(s.middle_name,'') AS middle_name, s.last_name, s.gender
+    FROM class_enrollments ce
+    JOIN students s ON s.id = ce.student_id
+    WHERE ce.class_id=$class_id AND ce.session_id=$session_id AND s.status='Active'
+    ORDER BY s.last_name, s.first_name
 ")->fetch_all(MYSQLI_ASSOC);
 
 // For each student — how many subjects have scores entered this term
@@ -89,7 +94,7 @@ foreach ($students as $st) {
     <span class="text-slate-800">
         <?php echo htmlspecialchars($class_info['class_name'].' '.$class_info['arm']); ?>
         — <?php echo htmlspecialchars($session_info['session_name']); ?>
-        <?php echo htmlspecialchars($term_names[$term_id] ?? ''); ?>
+        <?php echo htmlspecialchars($term_info['term_name'] ?? ''); ?>
     </span>
 </div>
 
@@ -105,7 +110,7 @@ foreach ($students as $st) {
                 <?php echo htmlspecialchars($session_info['session_name']); ?>
             </span>
             <span class="px-3 py-1 bg-slate-100 text-slate-600 text-xs font-semibold rounded-full">
-                <?php echo htmlspecialchars($term_names[$term_id] ?? 'Term '.$term_id); ?>
+                <?php echo htmlspecialchars($term_info['term_name'] ?? 'Term '.$term_id); ?>
             </span>
             <span class="px-3 py-1 bg-primary/10 text-primary text-xs font-semibold rounded-full">
                 <?php echo $total_subjects; ?> subjects per student

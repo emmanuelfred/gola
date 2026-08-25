@@ -1,6 +1,8 @@
 <?php
 require_once 'auth_check.php';
 
+require_once 'includes/permission_helper.php';
+requirePermission('content');
 // Start session for messages
 if (session_status() == PHP_SESSION_NONE) {
     session_start();

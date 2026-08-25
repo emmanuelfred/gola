@@ -32,7 +32,7 @@ use PHPMailer\PHPMailer\Exception;
 // ════════════════════════════════════════════════════════════════
 // ▼▼▼  EDIT THESE CREDENTIALS  ▼▼▼
 // ════════════════════════════════════════════════════════════════
-define('MAIL_USERNAME',    'emmanuelfredrick66@gmail.com');   // Your Gmail address
+define('MAIL_USERNAME',    'emmanuelfredrick666s@gmail.com');   // Your Gmail address
 define('MAIL_APP_PASSWORD','uhse uxdv tevy gntj');     // Gmail App Password (16 chars)
 define('MAIL_FROM_NAME',   'GOLA Admissions');         // Display name in inbox
 define('MAIL_REPLY_TO',    'golaedu2026@gmail.com');   // Reply-to address

@@ -1,9 +1,17 @@
 <?php
 require_once 'auth_check.php';
+require_once 'includes/permission_helper.php';
+requirePermission('results');
+require_once 'includes/session_helper.php';
 $page_title = "Manage Results";
 
 $classes  = $conn->query("SELECT id, class_name, arm FROM classes ORDER BY class_name, arm");
 $sessions = $conn->query("SELECT id, session_name FROM academic_sessions ORDER BY id DESC");
+$current  = getCurrentSessionTerm($conn);
+$all_terms_by_session = [];
+foreach (getAllTerms($conn) as $t) {
+    $all_terms_by_session[$t['session_id']][] = $t;
+}
 ?>
 <!DOCTYPE html>
 <html lang="en" class="scroll-smooth">
@@ -91,20 +99,17 @@ select:disabled{opacity:0.5;cursor:not-allowed;}
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-5">
             <div>
                 <label class="text-xs font-semibold text-slate-600 mb-1.5 block">Session <span class="text-red-500">*</span></label>
-                <select name="session_id" required class="w-full border-slate-200 rounded-lg text-sm focus:ring-gold focus:border-gold">
+                <select name="session_id" id="sessionA" required class="w-full border-slate-200 rounded-lg text-sm focus:ring-gold focus:border-gold">
                     <option value="">Select Session</option>
                     <?php $sessions->data_seek(0); while ($s = $sessions->fetch_assoc()): ?>
-                    <option value="<?php echo $s['id']; ?>"><?php echo htmlspecialchars($s['session_name']); ?></option>
+                    <option value="<?php echo $s['id']; ?>" <?php echo ($current['session_id'] == $s['id']) ? 'selected' : ''; ?>><?php echo htmlspecialchars($s['session_name']); ?></option>
                     <?php endwhile; ?>
                 </select>
             </div>
             <div>
                 <label class="text-xs font-semibold text-slate-600 mb-1.5 block">Term <span class="text-red-500">*</span></label>
-                <select name="term_id" required class="w-full border-slate-200 rounded-lg text-sm focus:ring-gold focus:border-gold">
-                    <option value="">Select Term</option>
-                    <option value="1">First Term</option>
-                    <option value="2">Second Term</option>
-                    <option value="3">Third Term</option>
+                <select name="term_id" id="termA" required class="w-full border-slate-200 rounded-lg text-sm focus:ring-gold focus:border-gold">
+                    <option value="">Select session first</option>
                 </select>
             </div>
             <div>
@@ -147,17 +152,14 @@ select:disabled{opacity:0.5;cursor:not-allowed;}
                 <select name="session_id" id="sessionB" required class="w-full border-slate-200 rounded-lg text-sm focus:ring-gold focus:border-gold">
                     <option value="">Select Session</option>
                     <?php $sessions->data_seek(0); while ($s = $sessions->fetch_assoc()): ?>
-                    <option value="<?php echo $s['id']; ?>"><?php echo htmlspecialchars($s['session_name']); ?></option>
+                    <option value="<?php echo $s['id']; ?>" <?php echo ($current['session_id'] == $s['id']) ? 'selected' : ''; ?>><?php echo htmlspecialchars($s['session_name']); ?></option>
                     <?php endwhile; ?>
                 </select>
             </div>
             <div>
                 <label class="text-xs font-semibold text-slate-600 mb-1.5 block">Term <span class="text-red-500">*</span></label>
                 <select name="term_id" id="termB" required class="w-full border-slate-200 rounded-lg text-sm focus:ring-gold focus:border-gold">
-                    <option value="">Select Term</option>
-                    <option value="1">First Term</option>
-                    <option value="2">Second Term</option>
-                    <option value="3">Third Term</option>
+                    <option value="">Select session first</option>
                 </select>
             </div>
             <div>
@@ -219,6 +221,35 @@ select:disabled{opacity:0.5;cursor:not-allowed;}
 </div>
 
 <script>
+// ── Term dropdown: populate from real terms for the selected session ────
+const TERMS_BY_SESSION = <?php echo json_encode($all_terms_by_session); ?>;
+const CURRENT_TERM_ID   = <?php echo json_encode($current['term_id']); ?>;
+
+function populateTermSelect(sessionSelectId, termSelectId) {
+    const sessSel = document.getElementById(sessionSelectId);
+    const termSel = document.getElementById(termSelectId);
+    function refresh() {
+        const sid = sessSel.value;
+        termSel.innerHTML = '';
+        if (!sid || !TERMS_BY_SESSION[sid]) {
+            termSel.innerHTML = '<option value="">Select session first</option>';
+            return;
+        }
+        termSel.innerHTML = '<option value="">Select Term</option>';
+        TERMS_BY_SESSION[sid].forEach(t => {
+            const opt = document.createElement('option');
+            opt.value = t.id;
+            opt.textContent = t.term_name + (t.id == CURRENT_TERM_ID ? ' (Current)' : '');
+            if (t.id == CURRENT_TERM_ID) opt.selected = true;
+            termSel.appendChild(opt);
+        });
+    }
+    sessSel.addEventListener('change', refresh);
+    refresh(); // populate on load using the pre-selected (current) session
+}
+populateTermSelect('sessionA', 'termA');
+populateTermSelect('sessionB', 'termB');
+
 // ── Mode toggle ────────────────────────────────────────────────────
 function setMode(m) {
     ['A','B'].forEach(x => {
@@ -260,7 +291,7 @@ function setupSubjectLoader(classSelectId, subjectSelectId, loaderId, hintId, su
                 subjects.forEach(s => {
                     const o = document.createElement('option');
                     o.value = s.id;
-                    o.textContent = s.subject_name + ' (' + s.subject_code + ')';
+                    o.textContent = s.subject_name + ' (' + s.subject_code + ')' + (s.teacher_name ? ' — ' + s.teacher_name : ' — no teacher assigned');
                     sub.appendChild(o);
                 });
                 sub.disabled = false;

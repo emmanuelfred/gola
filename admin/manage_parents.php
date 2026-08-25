@@ -1,5 +1,7 @@
 <?php
 require_once 'auth_check.php';
+require_once 'includes/permission_helper.php';
+requirePermission('students');
 require_once '../includes/email.php';
 
 $page_title = "Parent & Guardian Communications";

@@ -1,6 +1,9 @@
 <?php
 require_once '../config/database.php';
 require_once 'auth_check.php'; // This already has session_start()
+// NOTE: deliberately NOT permission-gated — this is each user's own account
+// page (change password, personal details), not a school-wide settings page.
+// Everyone needs to be able to reach this regardless of role.
 
 $success_message = '';
 $error_message = '';

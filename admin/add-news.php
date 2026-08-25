@@ -1,6 +1,8 @@
 <?php
 require_once 'auth_check.php';
 
+require_once 'includes/permission_helper.php';
+requirePermission('content');
 // Force error display for debugging
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);

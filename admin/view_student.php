@@ -1,5 +1,7 @@
 <?php
 require_once 'auth_check.php';
+require_once 'includes/permission_helper.php';
+requirePermission('students');
 $page_title = "View Student";
 
 $id = intval($_GET['id'] ?? 0);

@@ -1,8 +1,15 @@
 <?php
 require_once 'auth_check.php';
+require_once 'includes/permission_helper.php';
+requirePermission('classes');
+require_once 'includes/staff_helper.php';
+require_once 'includes/session_helper.php';
+require_once 'includes/enrollment_helper.php';
 $page_title = "Manage Classes";
 $success = '';
 $error   = '';
+
+$current = getCurrentSessionTerm($conn);
 
 // ── Handle actions ─────────────────────────────────────────────────────────────
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -16,12 +23,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if (!$class_name || !$class_level) {
             $error = 'Class name and level are required.';
+        } elseif (!$teacher_id) {
+            $error = 'Every class must have a form teacher assigned.';
         } else {
             $cn = mysqli_real_escape_string($conn, $class_name);
             $cl = mysqli_real_escape_string($conn, $class_level);
             $ar = mysqli_real_escape_string($conn, $arm);
-            $ti = $teacher_id ? $teacher_id : 'NULL';
-            $res = $conn->query("INSERT INTO classes (class_name, class_level, arm, class_teacher_id) VALUES ('$cn','$cl','$ar',$ti)");
+            $res = $conn->query("INSERT INTO classes (class_name, class_level, arm, class_teacher_id) VALUES ('$cn','$cl','$ar',$teacher_id)");
             if ($res) {
                 logActivity('add_class', "Added class: $class_name $arm");
                 $success = "Class <strong>$class_name $arm</strong> added.";
@@ -41,12 +49,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if (!$class_name || !$class_level) {
             $error = 'Class name and level are required.';
+        } elseif (!$teacher_id) {
+            $error = 'Every class must have a form teacher assigned.';
         } else {
             $cn = mysqli_real_escape_string($conn, $class_name);
             $cl = mysqli_real_escape_string($conn, $class_level);
             $ar = mysqli_real_escape_string($conn, $arm);
-            $ti = $teacher_id ? $teacher_id : 'NULL';
-            $conn->query("UPDATE classes SET class_name='$cn', class_level='$cl', arm='$ar', class_teacher_id=$ti WHERE id=$id");
+            $conn->query("UPDATE classes SET class_name='$cn', class_level='$cl', arm='$ar', class_teacher_id=$teacher_id WHERE id=$id");
             logActivity('edit_class', "Edited class ID $id: $class_name $arm");
             $success = "Class updated.";
         }
@@ -55,10 +64,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Delete class
     if (isset($_POST['delete_class']) && hasPermission('admin')) {
         $id = intval($_POST['class_id']);
-        // Check if students are assigned
+        // Check if anyone is currently enrolled (any session) or has a home class_id pointing here
         $count = $conn->query("SELECT COUNT(*) as c FROM students WHERE class_id=$id")->fetch_assoc()['c'];
-        if ($count > 0) {
-            $error = "Cannot delete — $count student(s) are assigned to this class. Reassign them first.";
+        $enrolled = $conn->query("SELECT COUNT(*) as c FROM class_enrollments WHERE class_id=$id")->fetch_assoc()['c'];
+        if ($count > 0 || $enrolled > 0) {
+            $error = "Cannot delete — students are linked to this class (as home class or roster history). Reassign them first.";
         } else {
             $conn->query("DELETE FROM class_subjects WHERE class_id=$id");
             $conn->query("DELETE FROM classes WHERE id=$id");
@@ -67,27 +77,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
-    // Promote all students in a class to a new class
+    // Update the "next class" label for all active students in a class — this is
+    // a PLANNING tool only. It updates students.class_id (their home/default
+    // class) but deliberately does NOT touch class_enrollments — students still
+    // have to be registered into their new class next session by the form
+    // teacher via reg no on the Class Roster page. This is what keeps a new
+    // session's classes empty until someone actually confirms who's in them.
     if (isset($_POST['promote_class']) && hasPermission('admin')) {
         $from_class = intval($_POST['from_class_id']);
         $to_class   = intval($_POST['to_class_id']);
         if ($from_class && $to_class && $from_class !== $to_class) {
             $count = $conn->query("SELECT COUNT(*) as c FROM students WHERE class_id=$from_class AND status='Active'")->fetch_assoc()['c'];
             $conn->query("UPDATE students SET class_id=$to_class WHERE class_id=$from_class AND status='Active'");
-            logActivity('promote_class', "Promoted $count students from class $from_class to $to_class");
-            $success = "<strong>$count student(s)</strong> promoted to new class.";
+            logActivity('promote_class', "Set next-class for $count students from class $from_class to $to_class (not auto-enrolled)");
+            $success = "<strong>$count student(s)</strong> marked for promotion to the new class. They still need to be registered there via <a href=\"class_roster.php\" class=\"underline font-semibold\">Class Roster</a> once the new session starts.";
         }
     }
 }
 
 // ── Fetch data ─────────────────────────────────────────────────────────────────
+$cur_session_id = intval($current['session_id'] ?? 0);
 $classes_raw = $conn->query("
     SELECT c.*,
-        (SELECT COUNT(*) FROM students s WHERE s.class_id=c.id AND s.status='Active') as student_count,
+        (SELECT COUNT(*) FROM class_enrollments ce JOIN students s2 ON s2.id=ce.student_id
+            WHERE ce.class_id=c.id AND ce.session_id=$cur_session_id AND s2.status='Active') as student_count,
         (SELECT COUNT(*) FROM class_subjects cs WHERE cs.class_id=c.id) as subject_count,
-        a.full_name as teacher_name
+        (SELECT COUNT(*) FROM students s3 WHERE s3.class_id=c.id) as home_count,
+        (SELECT COUNT(*) FROM class_enrollments ce2 WHERE ce2.class_id=c.id) as ever_enrolled_count,
+        CONCAT(st.first_name, ' ', st.last_name) as teacher_name
     FROM classes c
-    LEFT JOIN admin_users a ON a.id = c.class_teacher_id
+    LEFT JOIN staff st ON st.id = c.class_teacher_id
     ORDER BY c.class_level DESC, c.class_name, c.arm
 ")->fetch_all(MYSQLI_ASSOC);
 
@@ -97,7 +116,7 @@ foreach ($classes_raw as $cl) {
     $by_level[$cl['class_level']][] = $cl;
 }
 
-$teachers = $conn->query("SELECT id, full_name FROM admin_users WHERE is_active=1 ORDER BY full_name")->fetch_all(MYSQLI_ASSOC);
+$teachers = getAssignableStaff($conn);
 
 // Edit mode
 $edit_class = null;
@@ -129,7 +148,7 @@ if (isset($_GET['edit'])) {
 <div class="mb-6 flex flex-wrap items-start justify-between gap-4">
     <div>
         <h1 class="text-2xl font-bold text-slate-900">Manage Classes</h1>
-        <p class="text-slate-500 text-sm mt-1">Add, edit, and manage school classes. Promote whole classes at end of year.</p>
+        <p class="text-slate-500 text-sm mt-1">Add, edit, and manage school classes. Register students into a class each session via Class Roster.</p>
     </div>
     <div class="flex gap-3">
         <a href="manage_parents.php" class="inline-flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 text-slate-700 text-sm font-semibold rounded-xl hover:bg-slate-50">
@@ -192,7 +211,7 @@ if (isset($_GET['edit'])) {
             </div>
             <div class="p-4 space-y-2.5">
                 <div class="flex justify-between items-center text-sm">
-                    <span class="text-slate-500">Students</span>
+                    <span class="text-slate-500">Students (this session)</span>
                     <span class="font-bold text-primary"><?php echo $cl['student_count']; ?></span>
                 </div>
                 <div class="flex justify-between items-center text-sm">
@@ -203,25 +222,37 @@ if (isset($_GET['edit'])) {
                     <span class="text-slate-500">Class Teacher</span>
                     <span class="font-semibold text-slate-700 text-xs"><?php echo $cl['teacher_name'] ? htmlspecialchars(explode(' ',$cl['teacher_name'])[0]) : '—'; ?></span>
                 </div>
-                <div class="pt-2 flex gap-2 border-t border-slate-100">
-                    <a href="?edit=<?php echo $cl['id']; ?>"
-                        class="flex-1 py-1.5 bg-primary/5 hover:bg-primary/10 text-primary text-xs font-bold rounded-lg transition-all text-center flex items-center justify-center gap-1">
-                        <span class="material-symbols-outlined text-xs">edit</span>Edit
-                    </a>
-                    <a href="manage_parents.php?class_id=<?php echo $cl['id']; ?>"
-                        class="flex-1 py-1.5 bg-gold/10 hover:bg-gold/20 text-gold text-xs font-bold rounded-lg transition-all text-center flex items-center justify-center gap-1">
-                        <span class="material-symbols-outlined text-xs">family_restroom</span>Parents
-                    </a>
-                    <?php if ($cl['student_count'] == 0 && hasPermission('admin')): ?>
-                    <form method="POST" class="inline">
-                        <input type="hidden" name="delete_class" value="1">
-                        <input type="hidden" name="class_id" value="<?php echo $cl['id']; ?>">
-                        <button type="submit" onclick="return confirm('Delete this class?')"
-                            class="px-2 py-1.5 hover:bg-red-50 text-red-400 hover:text-red-600 rounded-lg transition-all" title="Delete">
-                            <span class="material-symbols-outlined text-sm">delete</span>
-                        </button>
-                    </form>
-                    <?php endif; ?>
+                <div class="pt-2 space-y-2 border-t border-slate-100">
+                    <div class="flex gap-2">
+                        <a href="?edit=<?php echo $cl['id']; ?>"
+                            class="flex-1 py-1.5 bg-primary/5 hover:bg-primary/10 text-primary text-xs font-bold rounded-lg transition-all text-center flex items-center justify-center gap-1">
+                            <span class="material-symbols-outlined text-xs">edit</span>Edit
+                        </a>
+                        <a href="class_roster.php?class_id=<?php echo $cl['id']; ?>"
+                            class="flex-1 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold rounded-lg transition-all text-center flex items-center justify-center gap-1">
+                            <span class="material-symbols-outlined text-xs">how_to_reg</span>Roster
+                        </a>
+                    </div>
+                    <div class="flex gap-2">
+                        <a href="manage_timetable.php?class_id=<?php echo $cl['id']; ?>"
+                            class="flex-1 py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-700 text-xs font-bold rounded-lg transition-all text-center flex items-center justify-center gap-1">
+                            <span class="material-symbols-outlined text-xs">calendar_view_week</span>Timetable
+                        </a>
+                        <a href="manage_parents.php?class_id=<?php echo $cl['id']; ?>"
+                            class="flex-1 py-1.5 bg-gold/10 hover:bg-gold/20 text-gold text-xs font-bold rounded-lg transition-all text-center flex items-center justify-center gap-1">
+                            <span class="material-symbols-outlined text-xs">family_restroom</span>Parents
+                        </a>
+                        <?php if ($cl['home_count'] == 0 && $cl['ever_enrolled_count'] == 0 && hasPermission('admin')): ?>
+                        <form method="POST" class="inline">
+                            <input type="hidden" name="delete_class" value="1">
+                            <input type="hidden" name="class_id" value="<?php echo $cl['id']; ?>">
+                            <button type="submit" onclick="return confirm('Delete this class?')"
+                                class="px-3 py-1.5 hover:bg-red-50 text-red-400 hover:text-red-600 rounded-lg transition-all" title="Delete">
+                                <span class="material-symbols-outlined text-sm">delete</span>
+                            </button>
+                        </form>
+                        <?php endif; ?>
+                    </div>
                 </div>
             </div>
         </div>
@@ -246,10 +277,13 @@ if (isset($_GET['edit'])) {
 <div class="mt-8 bg-white rounded-2xl border border-slate-200 p-6">
     <h2 class="font-bold text-slate-900 mb-1 flex items-center gap-2">
         <span class="material-symbols-outlined text-gold">upgrade</span>
-        Promote Entire Class
+        Plan Class Promotion
     </h2>
-    <p class="text-sm text-slate-500 mb-4">Move all active students from one class to another at end of academic year.</p>
-    <form method="POST" class="flex flex-wrap gap-4 items-end" onsubmit="return confirm('This will move ALL active students. Are you sure?')">
+    <p class="text-sm text-slate-500 mb-4">
+        Sets each student's <em>home class</em> for next session — a planning label only. It does <strong>not</strong> register them into the new class.
+        When the new session starts, the form teacher still confirms each student via reg no on <a href="class_roster.php" class="text-primary font-semibold hover:underline">Class Roster</a>.
+    </p>
+    <form method="POST" class="flex flex-wrap gap-4 items-end" onsubmit="return confirm('This sets the home class for planning purposes only — it will NOT register students into the new class. Continue?')">
         <input type="hidden" name="promote_class" value="1">
         <div>
             <label class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 block">From Class</label>
@@ -258,7 +292,7 @@ if (isset($_GET['edit'])) {
                 <?php foreach($classes_raw as $cl): ?>
                 <option value="<?php echo $cl['id']; ?>">
                     <?php echo htmlspecialchars($cl['class_name'].' '.$cl['arm']); ?>
-                    (<?php echo $cl['student_count']; ?> students)
+                    (<?php echo $cl['home_count']; ?> students)
                 </option>
                 <?php endforeach; ?>
             </select>
@@ -322,13 +356,16 @@ if (isset($_GET['edit'])) {
             <p class="text-xs text-slate-400 mt-1">Leave blank for single-stream classes</p>
         </div>
         <div>
-            <label class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 block">Class Teacher</label>
-            <select name="class_teacher_id" class="w-full border-slate-200 rounded-xl text-sm focus:ring-gold focus:border-gold px-3 py-2.5">
-                <option value="">None assigned</option>
+            <label class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 block">Form Teacher <span class="text-red-500">*</span></label>
+            <select name="class_teacher_id" required class="w-full border-slate-200 rounded-xl text-sm focus:ring-gold focus:border-gold px-3 py-2.5">
+                <option value="">Select form teacher…</option>
                 <?php foreach($teachers as $t): ?>
-                <option value="<?php echo $t['id']; ?>"><?php echo htmlspecialchars($t['full_name']); ?></option>
+                <option value="<?php echo $t['id']; ?>"><?php echo htmlspecialchars($t['first_name'].' '.$t['last_name']); ?> — <?php echo htmlspecialchars($t['role_name']); ?></option>
                 <?php endforeach; ?>
             </select>
+            <?php if (empty($teachers)): ?>
+            <p class="text-xs text-red-500 mt-1">No active staff found — <a href="add_staff.php" class="underline">add one first</a>.</p>
+            <?php endif; ?>
         </div>
         <div class="flex gap-3 pt-2">
             <button type="submit" class="flex-1 bg-gold text-primary py-3 rounded-xl font-bold hover:bg-gold/90">Add Class</button>
@@ -373,12 +410,12 @@ if (isset($_GET['edit'])) {
                 class="w-full border-slate-200 rounded-xl text-sm focus:ring-gold focus:border-gold px-4 py-2.5">
         </div>
         <div>
-            <label class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 block">Class Teacher</label>
-            <select name="class_teacher_id" class="w-full border-slate-200 rounded-xl text-sm focus:ring-gold focus:border-gold px-3 py-2.5">
-                <option value="">None assigned</option>
+            <label class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 block">Form Teacher <span class="text-red-500">*</span></label>
+            <select name="class_teacher_id" required class="w-full border-slate-200 rounded-xl text-sm focus:ring-gold focus:border-gold px-3 py-2.5">
+                <option value="">Select form teacher…</option>
                 <?php foreach($teachers as $t): ?>
                 <option value="<?php echo $t['id']; ?>" <?php echo $edit_class['class_teacher_id']==$t['id']?'selected':''; ?>>
-                    <?php echo htmlspecialchars($t['full_name']); ?>
+                    <?php echo htmlspecialchars($t['first_name'].' '.$t['last_name']); ?> — <?php echo htmlspecialchars($t['role_name']); ?>
                 </option>
                 <?php endforeach; ?>
             </select>

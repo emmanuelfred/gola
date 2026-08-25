@@ -1,6 +1,9 @@
 <?php
 require_once 'auth_check.php';
+require_once 'includes/permission_helper.php';
+requirePermission('admissions');
 require_once '../includes/email.php';
+require_once 'includes/session_helper.php';
 
 function getSetting($conn, $key, $default = '') {
     $r = $conn->query("SELECT setting_value FROM school_settings WHERE setting_key='".mysqli_real_escape_string($conn,$key)."' LIMIT 1");
@@ -84,8 +87,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             $student_id = 'GOLA/' . $year . '/' . str_pad($count + 1, 3, '0', STR_PAD_LEFT);
 
             // Get current session_id
-            $sess_row   = $conn->query("SELECT id FROM academic_sessions WHERE is_current=1 LIMIT 1")->fetch_assoc();
-            $session_id = $sess_row ? intval($sess_row['id']) : null;
+            $current_st = getCurrentSession($conn);
+            $session_id = $current_st ? intval($current_st['id']) : null;
 
             // Parse full name — stored as "SURNAME Firstname Middlename"
             $parts       = explode(' ', trim($app['full_name']), 3);

@@ -1,5 +1,8 @@
 <?php
 require_once 'auth_check.php';
+require_once 'includes/permission_helper.php';
+requirePermission('results');
+require_once 'includes/enrollment_helper.php';
 $page_title = "Enter Student Results";
 
 $session_id = intval($_GET['session_id'] ?? $_POST['session_id'] ?? 0);
@@ -13,23 +16,30 @@ if (!$session_id || !$term_id || !$class_id || !$student_db_id) {
 }
 
 // ── Info lookups ──────────────────────────────────────────────────────────────
+// Validate against session-scoped ENROLLMENT, not the student's permanent
+// home class_id — a student could be enrolled in a different class than
+// their default one (repeats, mid-session moves, etc).
 $student_info = $conn->query("
     SELECT s.*, c.class_name, c.arm
-    FROM students s JOIN classes c ON s.class_id=c.id
-    WHERE s.id=$student_db_id AND s.class_id=$class_id AND s.status='Active'
+    FROM students s
+    JOIN class_enrollments ce ON ce.student_id = s.id AND ce.class_id=$class_id AND ce.session_id=$session_id
+    JOIN classes c ON c.id = ce.class_id
+    WHERE s.id=$student_db_id AND s.status='Active'
 ")->fetch_assoc();
 
 $session_info = $conn->query("SELECT session_name FROM academic_sessions WHERE id=$session_id")->fetch_assoc();
 $class_info   = $conn->query("SELECT class_name, arm FROM classes WHERE id=$class_id")->fetch_assoc();
-$term_names   = [1=>'First Term', 2=>'Second Term', 3=>'Third Term'];
+$term_info    = $conn->query("SELECT term_name FROM terms WHERE id=$term_id")->fetch_assoc();
 
 if (!$student_info || !$session_info) { header('Location: manage_results.php'); exit; }
 
 // Subjects for this class
 $subjects_q = $conn->query("
-    SELECT s.id, s.subject_code, s.subject_name, s.category
+    SELECT s.id, s.subject_code, s.subject_name, s.category,
+           cs.teacher_id, st.first_name as teacher_first, st.last_name as teacher_last
     FROM class_subjects cs
     JOIN subjects s ON s.id=cs.subject_id
+    LEFT JOIN staff st ON st.id = cs.teacher_id
     WHERE cs.class_id=$class_id AND s.is_active=1
     ORDER BY s.subject_name
 ");
@@ -255,7 +265,7 @@ input:focus{outline:none;}
                 </span>
                 <span class="px-2 py-0.5 bg-white/10 text-white text-xs font-semibold rounded-full">
                     <?php echo htmlspecialchars($session_info['session_name']); ?>
-                    · <?php echo htmlspecialchars($term_names[$term_id] ?? ''); ?>
+                    · <?php echo htmlspecialchars($term_info['term_name'] ?? ''); ?>
                 </span>
             </div>
         </div>
@@ -390,7 +400,12 @@ input:focus{outline:none;}
                         <td class="px-4 py-2.5">
                             <div class="flex items-center gap-2">
                                 <span class="w-1.5 h-1.5 rounded-full <?php echo $dot; ?> flex-shrink-0"></span>
-                                <span class="font-semibold text-slate-800"><?php echo htmlspecialchars($subj['subject_name']); ?></span>
+                                <div>
+                                    <span class="font-semibold text-slate-800"><?php echo htmlspecialchars($subj['subject_name']); ?></span>
+                                    <p class="text-xs <?php echo $subj['teacher_id'] ? 'text-slate-400' : 'text-amber-500'; ?>">
+                                        <?php echo $subj['teacher_id'] ? htmlspecialchars($subj['teacher_first'].' '.$subj['teacher_last']) : 'No teacher assigned'; ?>
+                                    </p>
+                                </div>
                             </div>
                             <input type="hidden" name="subject_ids[]" value="<?php echo $subj['id']; ?>">
                         </td>

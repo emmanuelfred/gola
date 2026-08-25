@@ -1,5 +1,7 @@
 <?php
 require_once 'auth_check.php';
+require_once 'includes/permission_helper.php';
+requirePermission('scratch_cards');
 $page_title = "Scratch Cards";
 
 // Handle Generate
