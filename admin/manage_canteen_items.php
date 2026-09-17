@@ -66,6 +66,17 @@ if ($authorized && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action
         $conn->query("UPDATE canteen_items SET is_active=0 WHERE id=$id");
         $success = "Item removed.";
     }
+
+    if ($_POST['action'] === 'generate_barcode') {
+        $id = intval($_POST['item_id'] ?? 0);
+        $barcode = $id ? ensureItemBarcode($conn, $id) : null;
+        if ($barcode) {
+            logActivity('generate_canteen_barcode', "Generated barcode $barcode for item ID $id");
+            $success = "Barcode <strong>" . htmlspecialchars($barcode) . "</strong> generated.";
+        } else {
+            $error = 'Could not generate a barcode for that item.';
+        }
+    }
 }
 
 $search = trim($_GET['search'] ?? '');
@@ -82,6 +93,7 @@ $out_of_stock = array_filter($items, fn($i) => $i['quantity_in_stock'] == 0);
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
 <script>tailwind.config={theme:{extend:{colors:{primary:"#0A2E4D",gold:"#C5A059"},fontFamily:{sans:["Inter","sans-serif"]}}}};</script>
 <style>.sidebar-link.active{background:linear-gradient(90deg,rgba(197,160,89,.1) 0%,transparent 100%);border-left:3px solid #C5A059;color:#C5A059;}</style>
 </head>
@@ -110,10 +122,16 @@ $out_of_stock = array_filter($items, fn($i) => $i['quantity_in_stock'] == 0);
         <h1 class="text-2xl font-bold text-slate-900">Canteen Items</h1>
         <p class="text-slate-500 text-sm mt-1">Manage stock. To sell items, go to <a href="canteen_pos.php" class="text-primary font-semibold hover:underline">Sell (POS)</a>.</p>
     </div>
-    <button onclick="document.getElementById('addModal').classList.remove('hidden')"
-        class="inline-flex items-center gap-2 bg-gold text-primary px-5 py-3 rounded-xl font-bold hover:bg-gold/90 shadow-sm flex-shrink-0">
-        <span class="material-symbols-outlined">add_circle</span>New Item
-    </button>
+    <div class="flex gap-2 flex-shrink-0">
+        <button type="button" id="printSelectedBtn" onclick="printSelectedBarcodes()" disabled
+            class="inline-flex items-center gap-2 bg-white border border-slate-200 text-slate-500 px-5 py-3 rounded-xl font-bold hover:border-gold hover:text-primary shadow-sm disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:border-slate-200 disabled:hover:text-slate-500">
+            <span class="material-symbols-outlined">print</span>Print Selected Barcodes
+        </button>
+        <button onclick="document.getElementById('addModal').classList.remove('hidden')"
+            class="inline-flex items-center gap-2 bg-gold text-primary px-5 py-3 rounded-xl font-bold hover:bg-gold/90 shadow-sm flex-shrink-0">
+            <span class="material-symbols-outlined">add_circle</span>New Item
+        </button>
+    </div>
 </div>
 
 <?php if ($success): ?>
@@ -153,19 +171,26 @@ $out_of_stock = array_filter($items, fn($i) => $i['quantity_in_stock'] == 0);
     <table class="w-full text-sm">
         <thead class="bg-slate-50 border-b border-slate-200">
             <tr class="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                <th class="px-5 py-3 w-8"><input type="checkbox" id="selectAllBarcodes" onchange="toggleAllBarcodes(this)" class="rounded text-gold focus:ring-gold"></th>
                 <th class="px-5 py-3">Item</th>
                 <th class="px-5 py-3">Category</th>
                 <th class="px-5 py-3 text-right">Price</th>
                 <th class="px-5 py-3 text-center">Stock</th>
+                <th class="px-5 py-3">Barcode</th>
                 <th class="px-5 py-3 text-right">Actions</th>
             </tr>
         </thead>
         <tbody class="divide-y divide-slate-100">
             <?php if (empty($items)): ?>
-            <tr><td colspan="5" class="px-5 py-12 text-center text-slate-400">No items found.</td></tr>
+            <tr><td colspan="7" class="px-5 py-12 text-center text-slate-400">No items found.</td></tr>
             <?php endif; ?>
             <?php foreach ($items as $it): ?>
             <tr class="hover:bg-slate-50">
+                <td class="px-5 py-3">
+                    <?php if (!empty($it['barcode'])): ?>
+                    <input type="checkbox" class="barcodeCheck rounded text-gold focus:ring-gold" value="<?php echo $it['id']; ?>" onchange="updatePrintSelectedBtn()">
+                    <?php endif; ?>
+                </td>
                 <td class="px-5 py-3 font-semibold text-slate-800"><?php echo htmlspecialchars($it['name']); ?></td>
                 <td class="px-5 py-3 text-slate-500"><?php echo htmlspecialchars($it['category'] ?: '—'); ?></td>
                 <td class="px-5 py-3 text-right text-slate-700 font-medium">&#8358;<?php echo number_format($it['price'], 2); ?></td>
@@ -176,6 +201,21 @@ $out_of_stock = array_filter($items, fn($i) => $i['quantity_in_stock'] == 0);
                     <span class="px-2 py-0.5 bg-amber-100 text-amber-700 text-xs font-semibold rounded-full"><?php echo $it['quantity_in_stock']; ?> left — low</span>
                     <?php else: ?>
                     <span class="px-2 py-0.5 bg-green-100 text-green-700 text-xs font-semibold rounded-full"><?php echo $it['quantity_in_stock']; ?> in stock</span>
+                    <?php endif; ?>
+                </td>
+                <td class="px-5 py-3">
+                    <?php if (!empty($it['barcode'])): ?>
+                    <span class="font-mono text-xs text-slate-600"><?php echo htmlspecialchars($it['barcode']); ?></span>
+                    <div class="mt-1 flex gap-2">
+                        <button type="button" onclick='openBarcodeModal(<?php echo json_encode(["id"=>$it['id'],"name"=>$it['name'],"barcode"=>$it['barcode'],"price"=>(float)$it['price']]); ?>)' class="text-primary hover:underline text-xs font-semibold">View</button>
+                        <a href="print_barcode.php?ids=<?php echo $it['id']; ?>" target="_blank" class="text-slate-500 hover:underline text-xs font-semibold">Print</a>
+                    </div>
+                    <?php else: ?>
+                    <form method="POST" class="inline">
+                        <input type="hidden" name="action" value="generate_barcode">
+                        <input type="hidden" name="item_id" value="<?php echo $it['id']; ?>">
+                        <button type="submit" class="text-gold hover:underline text-xs font-semibold">Generate Barcode</button>
+                    </form>
                     <?php endif; ?>
                 </td>
                 <td class="px-5 py-3 text-right whitespace-nowrap">
@@ -276,7 +316,46 @@ $out_of_stock = array_filter($items, fn($i) => $i['quantity_in_stock'] == 0);
 </div>
 </div>
 
+<!-- View Barcode Modal -->
+<div id="barcodeModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+<div class="bg-white rounded-2xl p-8 max-w-sm w-full shadow-2xl text-center">
+    <h2 class="text-lg font-bold text-slate-900 mb-1" id="barcodeItemName"></h2>
+    <p class="text-gold font-bold text-sm mb-4" id="barcodeItemPrice"></p>
+    <div class="bg-white border border-slate-200 rounded-xl p-4 flex justify-center overflow-x-auto">
+        <svg id="barcodeSvg"></svg>
+    </div>
+    <p class="text-xs text-slate-400 mt-3 font-mono" id="barcodeNumber"></p>
+    <div class="flex gap-3 pt-5">
+        <a id="barcodePrintLink" target="_blank" class="flex-1 bg-gold text-primary py-3 rounded-xl font-bold hover:bg-gold/90 inline-flex items-center justify-center gap-2">
+            <span class="material-symbols-outlined text-base">print</span>Print
+        </a>
+        <button type="button" onclick="document.getElementById('barcodeModal').classList.add('hidden')" class="flex-1 bg-slate-100 text-slate-700 py-3 rounded-xl font-semibold hover:bg-slate-200">Close</button>
+    </div>
+</div>
+</div>
+
 <script>
+function openBarcodeModal(it) {
+    document.getElementById('barcodeItemName').textContent = it.name;
+    document.getElementById('barcodeItemPrice').textContent = '₦' + Number(it.price).toFixed(2);
+    document.getElementById('barcodeNumber').textContent = it.barcode;
+    document.getElementById('barcodePrintLink').href = 'print_barcode.php?ids=' + it.id;
+    JsBarcode('#barcodeSvg', it.barcode, { format: 'CODE128', width: 2, height: 60, displayValue: false, margin: 0 });
+    document.getElementById('barcodeModal').classList.remove('hidden');
+}
+function toggleAllBarcodes(source) {
+    document.querySelectorAll('.barcodeCheck').forEach(cb => cb.checked = source.checked);
+    updatePrintSelectedBtn();
+}
+function updatePrintSelectedBtn() {
+    const any = document.querySelectorAll('.barcodeCheck:checked').length > 0;
+    document.getElementById('printSelectedBtn').disabled = !any;
+}
+function printSelectedBarcodes() {
+    const ids = Array.from(document.querySelectorAll('.barcodeCheck:checked')).map(cb => cb.value);
+    if (ids.length === 0) return;
+    window.open('print_barcode.php?ids=' + ids.join(','), '_blank');
+}
 function openEditModal(it) {
     document.getElementById('editId').value = it.id;
     document.getElementById('editName').value = it.name;
@@ -291,7 +370,7 @@ function openRestockModal(it) {
     document.getElementById('restockItemName').textContent = it.name;
     document.getElementById('restockModal').classList.remove('hidden');
 }
-['addModal','editModal','restockModal'].forEach(id => {
+['addModal','editModal','restockModal','barcodeModal'].forEach(id => {
     document.getElementById(id).addEventListener('click', function(e) { if (e.target === this) this.classList.add('hidden'); });
 });
 </script>

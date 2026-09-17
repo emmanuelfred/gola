@@ -142,21 +142,32 @@ include '../includes/header.php';
             <span class="material-symbols-outlined text-sm">arrow_back</span>Check Another Result
         </a>
         <div class="flex gap-3">
-            <button onclick="window.print()"
+            <button id="printBtn" onclick="printExact()"
                 class="inline-flex items-center gap-2 bg-primary text-white px-5 py-2.5 rounded-xl font-semibold hover:bg-primary/90 transition-all text-sm shadow">
-                <span class="material-symbols-outlined text-sm">print</span>Print Result
+                <span class="material-symbols-outlined text-sm">print</span><span id="printBtnLabel">Print Result</span>
             </button>
         </div>
     </div>
 
     <!-- Result Card -->
-    <div class="bg-white rounded-2xl shadow-xl overflow-hidden print:shadow-none print:rounded-none" id="resultCard">
+    <div class="relative bg-white rounded-2xl shadow-xl overflow-hidden print:shadow-none print:rounded-none" id="resultCard">
+
+        <!-- Security watermark — repeats behind the content; also doubles as a
+             visible check that print colors/backgrounds came through intact -->
+        <div class="pointer-events-none select-none absolute inset-0 overflow-hidden opacity-[0.05] flex flex-wrap content-start" aria-hidden="true">
+            <?php for ($i = 0; $i < 24; $i++): ?>
+            <span class="text-primary font-black text-2xl whitespace-nowrap m-6 -rotate-[24deg]">G.O.L.A OFFICIAL</span>
+            <?php endfor; ?>
+        </div>
+
+        <div class="relative">
+        <div class="h-1.5 bg-gradient-to-r from-gold via-primary to-gold print:h-1"></div>
 
         <!-- School Header -->
         <div class="bg-primary text-white p-6 print:p-4">
             <div class="flex items-center gap-4">
-                <div class="w-16 h-16 bg-gold rounded-xl flex items-center justify-center flex-shrink-0 print:w-12 print:h-12">
-                    <span class="material-symbols-outlined text-primary text-3xl print:text-2xl">school</span>
+                <div class="w-16 h-16 flex items-center justify-center flex-shrink-0 print:w-12 print:h-12">
+                    <img src="../asset/favicon.png" alt="G.O.L.A Crest" class="w-full h-full object-contain">
                 </div>
                 <div>
                     <h1 class="text-2xl font-black tracking-wide print:text-xl">GOODNESS OMOGO LEADERSHIP ACADEMY</h1>
@@ -202,28 +213,33 @@ include '../includes/header.php';
         </div>
 
         <!-- Performance Summary Banner -->
-        <div class="grid grid-cols-2 md:grid-cols-4 divide-x divide-slate-200 border-b border-slate-200 print:grid-cols-4">
-            <div class="p-4 text-center">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-px bg-slate-200 border-b border-slate-200 print:grid-cols-4">
+            <div class="p-4 text-center bg-blue-50">
+                <span class="material-symbols-outlined text-blue-400 text-lg print:hidden">summarize</span>
                 <p class="text-3xl font-black text-primary print:text-2xl"><?php echo number_format($summary['total_score'], 1); ?></p>
                 <p class="text-xs text-slate-500 font-semibold uppercase mt-1">Total Score</p>
             </div>
-            <div class="p-4 text-center">
+            <div class="p-4 text-center bg-purple-50">
+                <span class="material-symbols-outlined text-purple-400 text-lg print:hidden">percent</span>
                 <p class="text-3xl font-black text-primary print:text-2xl"><?php echo number_format($summary['average_score'], 1); ?>%</p>
                 <p class="text-xs text-slate-500 font-semibold uppercase mt-1">Average</p>
             </div>
-            <div class="p-4 text-center">
+            <div class="p-4 text-center bg-amber-50">
                 <?php
                 $grade_info  = calculateGrade($summary['average_score']);
                 $grade_color = 'text-primary';
-                if ($grade_info['grade'] === 'A1') $grade_color = 'text-green-600';
-                elseif ($grade_info['grade'][0] === 'B') $grade_color = 'text-blue-600';
-                elseif ($grade_info['grade'][0] === 'C') $grade_color = 'text-yellow-600';
-                elseif (in_array($grade_info['grade'], ['D7','E8','F9'])) $grade_color = 'text-red-600';
+                $grade_icon_color = 'text-amber-400';
+                if ($grade_info['grade'] === 'A1') { $grade_color = 'text-green-600'; $grade_icon_color = 'text-green-400'; }
+                elseif ($grade_info['grade'][0] === 'B') { $grade_color = 'text-blue-600'; $grade_icon_color = 'text-blue-400'; }
+                elseif ($grade_info['grade'][0] === 'C') { $grade_color = 'text-yellow-700'; $grade_icon_color = 'text-yellow-500'; }
+                elseif (in_array($grade_info['grade'], ['D7','E8','F9'])) { $grade_color = 'text-red-600'; $grade_icon_color = 'text-red-400'; }
                 ?>
+                <span class="material-symbols-outlined <?php echo $grade_icon_color; ?> text-lg print:hidden">military_tech</span>
                 <p class="text-3xl font-black <?php echo $grade_color; ?> print:text-2xl"><?php echo htmlspecialchars($grade_info['grade']); ?></p>
                 <p class="text-xs text-slate-500 font-semibold uppercase mt-1">Overall Grade</p>
             </div>
-            <div class="p-4 text-center">
+            <div class="p-4 text-center bg-emerald-50">
+                <span class="material-symbols-outlined text-emerald-400 text-lg print:hidden">leaderboard</span>
                 <?php if ($summary['overall_position']): ?>
                 <p class="text-3xl font-black text-primary print:text-2xl"><?php echo htmlspecialchars($summary['overall_position']); ?></p>
                 <p class="text-xs text-slate-500 font-semibold uppercase mt-1">
@@ -275,11 +291,11 @@ include '../includes/header.php';
                         <?php foreach ($results as $sn => $r):
                             $gi = calculateGrade($r['total_score']);
                             $gc = match(true) {
-                                $gi['grade'] === 'A1'                    => 'text-green-700 font-bold',
-                                in_array($gi['grade'], ['B2','B3'])      => 'text-blue-700 font-bold',
-                                in_array($gi['grade'], ['C4','C5','C6']) => 'text-yellow-700 font-bold',
-                                $gi['grade'] === 'D7'                   => 'text-orange-700 font-bold',
-                                default                                  => 'text-red-700 font-bold',
+                                $gi['grade'] === 'A1'                    => 'bg-green-100 text-green-700',
+                                in_array($gi['grade'], ['B2','B3'])      => 'bg-blue-100 text-blue-700',
+                                in_array($gi['grade'], ['C4','C5','C6']) => 'bg-yellow-100 text-yellow-700',
+                                $gi['grade'] === 'D7'                   => 'bg-orange-100 text-orange-700',
+                                default                                  => 'bg-red-100 text-red-700',
                             };
                             $row_bg = ($sn % 2 === 0) ? '' : 'bg-slate-50';
                         ?>
@@ -290,7 +306,9 @@ include '../includes/header.php';
                             <td class="px-3 py-2 text-center border border-slate-200"><?php echo number_format($r['ca2'], 1); ?></td>
                             <td class="px-3 py-2 text-center border border-slate-200"><?php echo number_format($r['exam_score'], 1); ?></td>
                             <td class="px-3 py-2 text-center border border-slate-200 font-bold text-base text-primary"><?php echo number_format($r['total_score'], 1); ?></td>
-                            <td class="px-3 py-2 text-center border border-slate-200 <?php echo $gc; ?>"><?php echo htmlspecialchars($gi['grade']); ?></td>
+                            <td class="px-3 py-2 text-center border border-slate-200">
+                                <span class="inline-block px-2 py-0.5 rounded-full text-xs font-bold <?php echo $gc; ?>"><?php echo htmlspecialchars($gi['grade']); ?></span>
+                            </td>
                             <td class="px-3 py-2 text-center border border-slate-200 text-xs text-slate-600"><?php echo htmlspecialchars($gi['remark']); ?></td>
                         </tr>
                         <?php endforeach; ?>
@@ -333,7 +351,7 @@ include '../includes/header.php';
         <?php if (!empty($summary['class_teacher_comment']) || !empty($summary['principal_comment'])): ?>
         <div class="px-6 pb-6 grid md:grid-cols-2 gap-4 border-t border-slate-100 pt-5 print:px-4 print:pb-4">
             <?php if (!empty($summary['class_teacher_comment'])): ?>
-            <div class="bg-slate-50 border border-slate-200 rounded-xl p-4">
+            <div class="bg-slate-50 border border-slate-200 border-l-4 border-l-gold rounded-xl p-4">
                 <p class="text-xs font-bold text-slate-500 uppercase tracking-wide mb-1">
                     Class Teacher's Comment
                     <?php if (!empty($summary['class_teacher_name'])): ?>
@@ -347,7 +365,7 @@ include '../includes/header.php';
             </div>
             <?php endif; ?>
             <?php if (!empty($summary['principal_comment'])): ?>
-            <div class="bg-slate-50 border border-slate-200 rounded-xl p-4">
+            <div class="bg-slate-50 border border-slate-200 border-l-4 border-l-primary rounded-xl p-4">
                 <p class="text-xs font-bold text-slate-500 uppercase tracking-wide mb-1">
                     Principal's Comment
                     — <span class="text-primary"><?php echo htmlspecialchars($summary['principal_name'] ?? 'DR. SAMUEL OMOGO'); ?></span>
@@ -384,6 +402,7 @@ include '../includes/header.php';
             </p>
         </div>
 
+    </div><!-- /relative content wrap -->
     </div><!-- /resultCard -->
 </div>
 </section>
@@ -395,6 +414,72 @@ include '../includes/header.php';
     #resultCard { box-shadow: none !important; border-radius: 0 !important; }
     @page { margin: 10mm; size: A4; }
 }
+/* Belt-and-suspenders: tells browsers to keep backgrounds/colors even if the
+   JS snapshot below isn't used for some reason (JS disabled, popup blocked). */
+#resultCard, #resultCard * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    color-adjust: exact;
+}
 </style>
+
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<script>
+// Browsers are inconsistent about printing background colors/images unless
+// the person manually enables "Background graphics" in the print dialog —
+// that's what was stripping the navy/gold styling out of printed results.
+// To guarantee the printout matches the screen exactly, we take a real
+// screenshot of the rendered card with html2canvas and print that image
+// instead of relying on the browser's print stylesheet at all.
+function printExact() {
+    const btn = document.getElementById('printBtn');
+    const label = document.getElementById('printBtnLabel');
+    const originalLabel = label.textContent;
+    btn.disabled = true;
+    label.textContent = 'Preparing…';
+
+    html2canvas(document.getElementById('resultCard'), {
+        scale: 2,               // crisp print resolution
+        useCORS: true,
+        backgroundColor: '#ffffff'
+    }).then(function (canvas) {
+        const dataUrl = canvas.toDataURL('image/png');
+        const printWindow = window.open('', '_blank');
+        if (!printWindow) {
+            // Popup blocked — fall back to the browser's normal print.
+            btn.disabled = false;
+            label.textContent = originalLabel;
+            window.print();
+            return;
+        }
+        printWindow.document.write(
+            '<!DOCTYPE html><html><head><title>Print Result</title>' +
+            '<style>' +
+            '@page { size: A4; margin: 10mm; }' +
+            'html,body { margin:0; padding:0; }' +
+            'img { display:block; width:100%; height:auto; }' +
+            '</style></head><body>' +
+            '<img src="' + dataUrl + '" alt="">' +
+            '</body></html>'
+        );
+        printWindow.document.close();
+
+        const img = printWindow.document.querySelector('img');
+        img.onload = function () {
+            printWindow.focus();
+            printWindow.print();
+        };
+        printWindow.onafterprint = function () { printWindow.close(); };
+
+        btn.disabled = false;
+        label.textContent = originalLabel;
+    }).catch(function (err) {
+        console.error('Exact-print snapshot failed, falling back to normal print:', err);
+        btn.disabled = false;
+        label.textContent = originalLabel;
+        window.print();
+    });
+}
+</script>
 
 <?php include '../includes/footer.php'; ?>

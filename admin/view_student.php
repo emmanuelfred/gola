@@ -44,6 +44,7 @@ $sc = $status_colors[$st['status']] ?? 'bg-slate-100 text-slate-700';
                     <p class="text-slate-500 text-sm font-mono"><?php echo htmlspecialchars($st['student_id']); ?></p>
                 </div>
                 <span class="px-3 py-1 rounded-full text-xs font-bold <?php echo $sc; ?>"><?php echo $st['status']; ?></span>
+                <a href="print_id_card.php?ids=<?php echo $id; ?>" target="_blank" class="inline-flex items-center gap-2 bg-white border border-slate-200 text-slate-600 px-4 py-2 rounded-lg font-semibold text-sm hover:border-gold hover:text-primary"><span class="material-symbols-outlined text-lg">badge</span>ID Card</a>
                 <a href="edit_student.php?id=<?php echo $id; ?>" class="inline-flex items-center gap-2 bg-gold text-primary px-4 py-2 rounded-lg font-semibold text-sm hover:bg-gold/90"><span class="material-symbols-outlined text-lg">edit</span>Edit</a>
             </div>
 

@@ -57,6 +57,56 @@ function getItem(mysqli $conn, int $item_id): ?array {
 }
 
 /**
+ * Deterministic, unique barcode for an item — a pure function of the item's
+ * own auto-increment ID, so it can never collide with another item's code
+ * and never needs a "has this been taken?" check against the database.
+ * The '200' prefix marks it as an internal-use (non-GS1-registered) code,
+ * and the trailing digit is a standard mod-10 check digit, purely so a
+ * scanner that misreads one digit is more likely to reject the code outright
+ * rather than silently resolve to the wrong product.
+ */
+function generateItemBarcode(int $item_id): string {
+    $base = '200' . str_pad((string) $item_id, 9, '0', STR_PAD_LEFT); // 12 digits
+    $sum = 0;
+    foreach (str_split(strrev($base)) as $i => $d) {
+        $sum += ($i % 2 === 0) ? $d * 3 : $d;
+    }
+    $check = (10 - ($sum % 10)) % 10;
+    return $base . $check; // 13 digits total
+}
+
+/**
+ * Save a barcode onto an item, but only if it doesn't already have one —
+ * this is what makes "Generate Barcode" a one-time, permanent action rather
+ * than something that silently reissues a new code on every click.
+ * Returns the barcode that ends up stored (existing one if it already had
+ * one), or null on failure (e.g. a freak collision with another item).
+ */
+function ensureItemBarcode(mysqli $conn, int $item_id): ?string {
+    $item = getItem($conn, $item_id);
+    if (!$item) return null;
+    if (!empty($item['barcode'])) return $item['barcode'];
+
+    $barcode = generateItemBarcode($item_id);
+    $stmt = $conn->prepare("UPDATE canteen_items SET barcode = ? WHERE id = ? AND barcode IS NULL");
+    $stmt->bind_param("si", $barcode, $item_id);
+    $stmt->execute();
+    return $stmt->affected_rows > 0 ? $barcode : ($conn->query("SELECT barcode FROM canteen_items WHERE id=$item_id")->fetch_assoc()['barcode'] ?? null);
+}
+
+/**
+ * Look up an active item by scanned barcode — used by the "Scan Product"
+ * flow on the Sell (POS) page.
+ */
+function getItemByBarcode(mysqli $conn, string $barcode): ?array {
+    $stmt = $conn->prepare("SELECT * FROM canteen_items WHERE barcode = ? AND is_active = 1");
+    $stmt->bind_param("s", $barcode);
+    $stmt->execute();
+    $row = $stmt->get_result()->fetch_assoc();
+    return $row ?: null;
+}
+
+/**
  * Resolve the credit limit that applies to a given student right now.
  */
 function getStudentCreditLimit(mysqli $conn, int $student_id): float {

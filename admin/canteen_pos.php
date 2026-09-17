@@ -38,6 +38,30 @@ if ($authorized && isset($_GET['ajax']) && $_GET['ajax'] === 'lookup_student') {
     exit;
 }
 
+// ── AJAX: barcode lookup (Scan Product) ─────────────────────────────────────
+// Price and stock are always read fresh from canteen_items right here — the
+// barcode itself never carries a price, so an admin changing an item's price
+// takes effect on the very next scan with no other change needed.
+if ($authorized && isset($_GET['ajax']) && $_GET['ajax'] === 'lookup_barcode') {
+    ob_clean();
+    header('Content-Type: application/json');
+    $barcode = trim($_GET['code'] ?? '');
+    $item = $barcode ? getItemByBarcode($conn, $barcode) : null;
+    if ($item) {
+        $response = [
+            'found' => true,
+            'id' => (int) $item['id'],
+            'name' => $item['name'],
+            'price' => (float) $item['price'],
+            'stock' => (int) $item['quantity_in_stock'],
+        ];
+    } else {
+        $response = ['found' => false];
+    }
+    echo json_encode($response);
+    exit;
+}
+
 // ── Charge / complete sale ──────────────────────────────────────────────────
 $success = null;
 $error   = '';
@@ -123,10 +147,16 @@ $items  = $authorized ? getActiveItems($conn, $search) : [];
 <div class="grid lg:grid-cols-3 gap-6">
     <!-- Item grid -->
     <div class="lg:col-span-2">
+        <div id="scanBox" class="mb-4 bg-primary/5 border-2 border-dashed border-primary/30 rounded-xl p-3 flex items-center gap-3">
+            <span class="material-symbols-outlined text-primary flex-shrink-0">barcode_scanner</span>
+            <input type="text" id="scanInput" autocomplete="off" readonly placeholder="Ready to scan — aim the scanner and pull the trigger"
+                class="flex-1 border-0 bg-transparent text-sm font-medium text-slate-800 focus:ring-0 placeholder:text-slate-400" style="caret-color:transparent">
+        </div>
         <form method="GET" class="mb-4">
-            <input type="text" name="search" value="<?php echo htmlspecialchars($search); ?>" placeholder="Search items…"
+            <input type="text" name="search" value="<?php echo htmlspecialchars($search); ?>" placeholder="Or search items by name…"
                 class="w-full border-slate-200 rounded-lg text-sm focus:ring-gold focus:border-gold">
         </form>
+        <p id="scanMessage" class="text-xs mb-3"></p>
         <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
             <?php foreach ($items as $it): ?>
             <button type="button"
@@ -310,6 +340,94 @@ document.getElementById('chargeForm').addEventListener('submit', function() {
     const overrideEl = document.getElementById('overrideLimit');
     document.getElementById('overrideInput').value = (overrideEl && overrideEl.checked) ? '1' : '';
 });
+
+// ── Scan Product (wired USB scanner) ────────────────────────────────────
+// The physical scanner is a USB HID device — to the browser it's just a
+// keyboard that types very fast and presses Enter at the end. Rather than
+// requiring one exact box to have literal DOM focus (fragile — a click, a
+// modal, anything can steal focus away from it), we listen at the document
+// level: any keystroke that lands while the operator isn't deliberately
+// typing into a real field (student reg no, item search, etc.) is treated
+// as scanner input, echoed into the box below for visibility, and flushed
+// into a lookup on Enter. A short idle timeout clears a stalled buffer so a
+// half-finished scan can't silently glue onto the next one.
+let scanLocked = false;
+let scanBuffer = '';
+let scanIdleTimer = null;
+const scanInput = document.getElementById('scanInput');
+
+function isRealFieldFocused() {
+    const active = document.activeElement;
+    if (!active || active === scanInput) return false;
+    return active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.tagName === 'SELECT';
+}
+
+document.addEventListener('keydown', function (e) {
+    if (isRealFieldFocused()) return; // don't intercept the operator's own typing elsewhere
+
+    if (e.key === 'Enter' || e.key === 'Tab') {
+        if (!scanBuffer) return;
+        e.preventDefault();
+        flushScanBuffer();
+        return;
+    }
+    if (e.key.length === 1) { // any single printable character
+        scanBuffer += e.key;
+        scanInput.value = scanBuffer;
+        clearTimeout(scanIdleTimer);
+        // A scanner fires off its whole code in a handful of milliseconds.
+        // If nothing new arrives for a short beat, the scan is done —
+        // process it, whether or not the scanner also sends an Enter/Tab.
+        scanIdleTimer = setTimeout(flushScanBuffer, 150);
+    }
+});
+
+function flushScanBuffer() {
+    clearTimeout(scanIdleTimer);
+    const code = scanBuffer.trim();
+    scanBuffer = '';
+    scanInput.value = '';
+    if (code) lookupScannedBarcode(code);
+}
+
+// Same addToCart() used by the item grid above — scanning never creates a
+// separate cart, it just calls straight into the existing one, and repeat
+// scans of the same barcode bump that line's qty instead of duplicating it.
+function lookupScannedBarcode(code) {
+    if (scanLocked) return;
+    scanLocked = true;
+    const msgEl = document.getElementById('scanMessage');
+    msgEl.innerHTML = '<span class="text-slate-400">Looking up ' + code + '…</span>';
+
+    fetch('canteen_pos.php?ajax=lookup_barcode&code=' + encodeURIComponent(code))
+        .then(async r => {
+            const text = await r.text();
+            if (r.redirected || !r.ok) throw new Error('SESSION_EXPIRED');
+            try { return JSON.parse(text); } catch (e) { throw new Error('BAD_RESPONSE'); }
+        })
+        .then(data => {
+            if (!data.found) {
+                msgEl.innerHTML = '<span class="text-red-500">Product not found.</span>';
+            } else {
+                const existing = cart.find(c => c.id === data.id);
+                const inCartQty = existing ? existing.qty : 0;
+                if (data.stock < 1 || inCartQty >= data.stock) {
+                    msgEl.innerHTML = '<span class="text-red-500">No more stock available for ' + data.name + '.</span>';
+                } else {
+                    addToCart({ id: data.id, name: data.name, price: data.price, stock: data.stock });
+                    msgEl.innerHTML = '<span class="text-green-600">&#10003; Added ' + data.name + ' to cart.</span>';
+                }
+            }
+            scanLocked = false;
+        })
+        .catch(err => {
+            const text = err.message === 'SESSION_EXPIRED'
+                ? 'Your session has expired — refresh the page and log in again.'
+                : 'Lookup failed — check your connection and try again.';
+            msgEl.innerHTML = '<span class="text-red-500">' + text + '</span>';
+            scanLocked = false;
+        });
+}
 </script>
 <?php endif; ?>
 </body>

@@ -72,6 +72,13 @@ $active_students = $conn->query("SELECT COUNT(*) as c FROM students WHERE status
                 </a>
             </div>
 
+            <div class="flex justify-end mb-4">
+                <button type="button" id="printCardsBtn" onclick="printSelectedCards()" disabled
+                    class="inline-flex items-center gap-2 bg-white border border-slate-200 text-slate-500 px-4 py-2.5 rounded-lg text-sm font-semibold hover:border-gold hover:text-primary disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:border-slate-200 disabled:hover:text-slate-500">
+                    <span class="material-symbols-outlined text-lg">badge</span>Print Selected ID Cards
+                </button>
+            </div>
+
             <?php if (isset($success)): ?>
             <div class="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm"><?php echo $success; ?></div>
             <?php endif; ?>
@@ -113,6 +120,7 @@ $active_students = $conn->query("SELECT COUNT(*) as c FROM students WHERE status
                     <table class="w-full text-sm">
                         <thead class="bg-slate-50 border-b border-slate-200">
                             <tr>
+                                <th class="px-4 py-3 w-8"><input type="checkbox" id="selectAllStudents" onchange="toggleAllStudentCards(this)" class="rounded text-gold focus:ring-gold"></th>
                                 <th class="px-4 py-3 text-left font-semibold text-slate-600">Student</th>
                                 <th class="px-4 py-3 text-left font-semibold text-slate-600">Reg. Number</th>
                                 <th class="px-4 py-3 text-left font-semibold text-slate-600">Class</th>
@@ -123,13 +131,14 @@ $active_students = $conn->query("SELECT COUNT(*) as c FROM students WHERE status
                         </thead>
                         <tbody class="divide-y divide-slate-100">
                             <?php if ($students->num_rows == 0): ?>
-                            <tr><td colspan="6" class="px-4 py-12 text-center text-slate-500">No students found. <a href="add_student.php" class="text-gold font-semibold">Register one now</a>.</td></tr>
+                            <tr><td colspan="7" class="px-4 py-12 text-center text-slate-500">No students found. <a href="add_student.php" class="text-gold font-semibold">Register one now</a>.</td></tr>
                             <?php endif; ?>
                             <?php while ($st = $students->fetch_assoc()):
                                 $status_colors = ['Active'=>'bg-green-100 text-green-700','Graduated'=>'bg-blue-100 text-blue-700','Withdrawn'=>'bg-yellow-100 text-yellow-700','Suspended'=>'bg-red-100 text-red-700'];
                                 $sc = $status_colors[$st['status']] ?? 'bg-slate-100 text-slate-700';
                             ?>
                             <tr class="hover:bg-slate-50 transition-colors">
+                                <td class="px-4 py-3"><input type="checkbox" class="studentCardCheck rounded text-gold focus:ring-gold" value="<?php echo $st['id']; ?>" onchange="updatePrintCardsBtn()"></td>
                                 <td class="px-4 py-3">
                                     <div class="flex items-center gap-3">
                                         <div class="w-9 h-9 bg-gold/10 rounded-full flex items-center justify-center text-gold font-bold text-xs">
@@ -147,6 +156,7 @@ $active_students = $conn->query("SELECT COUNT(*) as c FROM students WHERE status
                                 <td class="px-4 py-3 text-center"><span class="px-2 py-1 rounded-full text-xs font-semibold <?php echo $sc; ?>"><?php echo $st['status']; ?></span></td>
                                 <td class="px-4 py-3 text-center">
                                     <div class="flex justify-center gap-1">
+                                        <a href="print_id_card.php?ids=<?php echo $st['id']; ?>" target="_blank" class="p-1.5 hover:bg-amber-50 rounded text-gold" title="Print ID Card"><span class="material-symbols-outlined text-lg">badge</span></a>
                                         <a href="edit_student.php?id=<?php echo $st['id']; ?>" class="p-1.5 hover:bg-blue-50 rounded text-blue-600" title="Edit"><span class="material-symbols-outlined text-lg">edit</span></a>
                                         <a href="view_student.php?id=<?php echo $st['id']; ?>" class="p-1.5 hover:bg-slate-50 rounded text-slate-600" title="View"><span class="material-symbols-outlined text-lg">visibility</span></a>
                                         <?php if (hasPermission('admin')): ?>
@@ -164,5 +174,20 @@ $active_students = $conn->query("SELECT COUNT(*) as c FROM students WHERE status
         </main>
     </div>
 </div>
+<script>
+function toggleAllStudentCards(source) {
+    document.querySelectorAll('.studentCardCheck').forEach(cb => cb.checked = source.checked);
+    updatePrintCardsBtn();
+}
+function updatePrintCardsBtn() {
+    const any = document.querySelectorAll('.studentCardCheck:checked').length > 0;
+    document.getElementById('printCardsBtn').disabled = !any;
+}
+function printSelectedCards() {
+    const ids = Array.from(document.querySelectorAll('.studentCardCheck:checked')).map(cb => cb.value);
+    if (ids.length === 0) return;
+    window.open('print_id_card.php?ids=' + ids.join(','), '_blank');
+}
+</script>
 </body>
 </html>
