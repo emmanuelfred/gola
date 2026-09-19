@@ -34,29 +34,49 @@ if (empty($labels)) { die('None of the selected items have a barcode yet. Genera
     body { font-family: Arial, Helvetica, sans-serif; margin: 20px; color: #1a1a1a; }
     .no-print { text-align: center; margin-bottom: 20px; }
     .no-print button { padding: 10px 24px; background: #0A2E4D; color: #fff; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 14px; }
-    .label-sheet { display: flex; flex-wrap: wrap; gap: 12px; }
-    .label {
-        width: 220px;
-        border: 1px dashed #999;
-        border-radius: 6px;
-        padding: 10px;
-        text-align: center;
-        page-break-inside: avoid;
+    .size-toggle { margin-top: 12px; font-size: 13px; color: #334155; display: flex; gap: 18px; justify-content: center; }
+    .size-toggle label { cursor: pointer; }
+
+    :root {
+        --label-w: 38mm; --label-h: 20mm;
+        --name-fs: 6.5pt; --num-fs: 5.3pt; --price-fs: 7pt; --pad: 1.5mm;
     }
-    .label .name { font-weight: bold; font-size: 13px; margin-bottom: 4px; word-wrap: break-word; }
-    .label svg { max-width: 100%; }
-    .label .num { font-size: 11px; color: #444; margin-top: 2px; font-family: 'Courier New', monospace; }
-    .label .price { font-weight: bold; font-size: 14px; margin-top: 4px; }
+    body.size-medium {
+        --label-w: 58mm; --label-h: 30mm;
+        --name-fs: 9pt; --num-fs: 7pt; --price-fs: 10pt; --pad: 2.5mm;
+    }
+    body.size-tiny {
+        --label-w: 28mm; --label-h: 15mm;
+        --name-fs: 5.2pt; --num-fs: 4.4pt; --price-fs: 5.8pt; --pad: 1mm;
+    }
+
+    .label-sheet { display: flex; flex-wrap: wrap; gap: 2mm; }
+    .label {
+        width: var(--label-w); height: var(--label-h);
+        border: 0.2mm dashed #999; border-radius: 1mm; padding: var(--pad);
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        text-align: center; overflow: hidden; page-break-inside: avoid;
+    }
+    .label .name { font-weight: bold; font-size: var(--name-fs); line-height: 1.15; margin-bottom: 0.4mm;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+    .label .barcode-svg { width: 92%; height: auto; display: block; }
+    .label .num { font-size: var(--num-fs); color: #444; margin-top: 0.3mm; font-family: 'Courier New', monospace; letter-spacing: 0.02em; }
+    .label .price { font-weight: bold; font-size: var(--price-fs); margin-top: 0.4mm; }
     @media print {
         .no-print { display: none; }
         body { margin: 0; }
-        .label { border: 1px solid #ccc; }
+        .label { border: 0.15mm solid #ccc; }
     }
 </style>
 </head>
 <body>
     <div class="no-print">
         <button onclick="window.print()">Print Labels</button>
+        <div class="size-toggle">
+            <label><input type="radio" name="labelSize" value="tiny" onchange="setSize(this.value)"> Tiny (28×15mm)</label>
+            <label><input type="radio" name="labelSize" value="small" checked onchange="setSize(this.value)"> Small (38×20mm) — fits small items</label>
+            <label><input type="radio" name="labelSize" value="medium" onchange="setSize(this.value)"> Medium (58×30mm)</label>
+        </div>
     </div>
 
     <div class="label-sheet">
@@ -71,9 +91,24 @@ if (empty($labels)) { die('None of the selected items have a barcode yet. Genera
     </div>
 
     <script>
+        // Draw each barcode once, then strip its fixed px width/height in
+        // favour of a viewBox — that turns it into a responsive vector, so
+        // the size toggle below just resizes it via CSS with zero quality
+        // loss, instead of needing to redraw the barcode for every size.
         document.querySelectorAll('.barcode-svg').forEach(function (svg) {
-            JsBarcode(svg, svg.dataset.code, { format: 'CODE128', width: 1.6, height: 45, fontSize: 11, margin: 0 });
+            JsBarcode(svg, svg.dataset.code, { format: 'CODE128', width: 1.6, height: 36, fontSize: 0, margin: 0, displayValue: false });
+            const w = svg.getAttribute('width');
+            const h = svg.getAttribute('height');
+            svg.setAttribute('viewBox', '0 0 ' + w + ' ' + h);
+            svg.removeAttribute('width');
+            svg.removeAttribute('height');
         });
+
+        function setSize(size) {
+            document.body.classList.remove('size-tiny', 'size-medium');
+            if (size === 'tiny') document.body.classList.add('size-tiny');
+            if (size === 'medium') document.body.classList.add('size-medium');
+        }
     </script>
 </body>
 </html>
