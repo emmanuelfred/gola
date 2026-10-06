@@ -41,6 +41,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             }
         }
     }
+
+    if ($_POST['action'] === 'delete_category') {
+        $cat_id = intval($_POST['category_id'] ?? 0);
+        if ($cat_id) {
+            try {
+                $stmt = $conn->prepare("DELETE FROM fee_categories WHERE id = ?");
+                $stmt->bind_param("i", $cat_id);
+                if ($stmt->execute() && $stmt->affected_rows > 0) {
+                    logActivity('delete_fee_category', "Deleted fee category $cat_id");
+                    $success = "Category deleted.";
+                } else {
+                    $error = 'Category could not be deleted. It may no longer exist or is still in use.';
+                }
+            } catch (mysqli_sql_exception $e) {
+                $error = 'This category is still in use (fees or payments reference it), so it cannot be deleted.';
+            }
+        }
+    }
 }
 
 $current    = getCurrentSessionTerm($conn);
@@ -148,6 +166,11 @@ if ($class_id && $session_id && $term_id) {
                 <span class="text-slate-400">&#8358;</span>
                 <input type="number" step="0.01" min="0" name="amount[<?php echo $row['category_id']; ?>]" value="<?php echo number_format($row['amount'],2,'.',''); ?>"
                     class="w-48 border-slate-200 rounded-lg text-sm focus:ring-gold focus:border-gold">
+                <button type="button" title="Delete category"
+                    onclick="deleteCategory(<?php echo (int)$row['category_id']; ?>, <?php echo htmlspecialchars(json_encode($row['name']), ENT_QUOTES); ?>)"
+                    class="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg">
+                    <span class="material-symbols-outlined text-lg">delete</span>
+                </button>
             </div>
             <?php endforeach; ?>
         </div>
@@ -158,7 +181,16 @@ if ($class_id && $session_id && $term_id) {
         </div>
     </form>
 </div>
+<form id="deleteCatForm" method="POST" class="hidden">
+    <input type="hidden" name="action" value="delete_category">
+    <input type="hidden" name="category_id" id="deleteCatId">
+</form>
 <script>
+function deleteCategory(id, name) {
+    if (!confirm('Delete the "' + name + '" category?\n\nThis removes it for ALL classes and terms and cannot be undone.')) return;
+    document.getElementById('deleteCatId').value = id;
+    document.getElementById('deleteCatForm').submit();
+}
 document.querySelectorAll('input[name^="amount"]').forEach(inp => {
     inp.addEventListener('input', () => {
         let total = 0;

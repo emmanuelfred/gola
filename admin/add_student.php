@@ -48,7 +48,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $year = date('Y');
         $count_q = $conn->query("SELECT COUNT(*) as c FROM students WHERE class_id = $class_id");
         $count = $count_q->fetch_assoc()['c'] + 1;
-        $student_id = 'GOLA/' . $year . '/' . $class_code . '/' . str_pad($count, 3, '0', STR_PAD_LEFT);
+        $student_id = 'GOLA/' . $year . '/' . str_pad($count, 3, '0', STR_PAD_LEFT);
 
         // Ensure unique
         $check = $conn->prepare("SELECT id FROM students WHERE student_id = ?");

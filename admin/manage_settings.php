@@ -10,6 +10,47 @@ $success = '';
 $error   = '';
 $tab     = $_GET['tab'] ?? 'session';
 
+// ── Term rules ───────────────────────────────────────────────────────────────
+// A session has exactly three terms (First, Second, Third). The database
+// already restricts term_name to those three values; these helpers add the
+// rest of the rule: no more than three, no repeats, and no overlapping dates.
+const MAX_TERMS_PER_SESSION = 3;
+const TERM_NAMES = ['First Term', 'Second Term', 'Third Term'];
+
+function term_valid_date(string $d): bool {
+    $dt = DateTime::createFromFormat('Y-m-d', $d);
+    return $dt !== false && $dt->format('Y-m-d') === $d;
+}
+
+// Sensible default dates for a term, from the year the session starts in.
+function term_default_dates(int $start_year, string $term_name): array {
+    $next = $start_year + 1;
+    if ($term_name === 'First Term')  return ["$start_year-09-01", "$start_year-12-15"];
+    if ($term_name === 'Second Term') return ["$next-01-06", "$next-04-15"];
+    return ["$next-04-28", "$next-08-15"];
+}
+
+// The other terms already in a session (optionally leaving one out, so a
+// term being edited isn't compared against itself).
+function term_siblings(mysqli $conn, int $session_id, int $exclude_term_id = 0): array {
+    $stmt = $conn->prepare("SELECT id, term_name, start_date, end_date FROM terms WHERE session_id=? AND id<>? ORDER BY start_date");
+    $stmt->bind_param("ii", $session_id, $exclude_term_id);
+    $stmt->execute();
+    return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+}
+
+// Returns a plain-text problem with these dates, or '' if they're fine.
+function term_check_dates(string $start, string $end, array $others): string {
+    if (!term_valid_date($start) || !term_valid_date($end)) return 'Please enter a valid start date and end date.';
+    if ($end < $start) return 'The end date cannot be before the start date.';
+    foreach ($others as $o) {
+        if ($start <= $o['end_date'] && $o['start_date'] <= $end) {
+            return 'These dates overlap ' . $o['term_name'] . ' (' . date('d M Y', strtotime($o['start_date'])) . ' – ' . date('d M Y', strtotime($o['end_date'])) . ').';
+        }
+    }
+    return '';
+}
+
 // ── Session & Term actions ───────────────────────────────────────────────────
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
@@ -19,35 +60,59 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $end   = trim($_POST['end_date'] ?? '');
         $curr  = isset($_POST['is_current']) ? 1 : 0;
 
+        $dup = $name ? $conn->query("SELECT id FROM academic_sessions WHERE session_name='" . $conn->real_escape_string($name) . "'")->fetch_assoc() : null;
+
         if (!$name || !$start || !$end) {
             $error = 'Please fill in all required session fields.';
+        } elseif (!preg_match('/^(\d{4})\/(\d{4})$/', $name, $ym)) {
+            $error = 'Session name must look like 2026/2027.';
+        } elseif ($dup) {
+            $error = 'That session already exists.';
+        } elseif (!term_valid_date($start) || !term_valid_date($end) || $end < $start) {
+            $error = 'Enter a valid session start and end date (the end cannot be before the start).';
         } else {
-            if ($curr) {
-                $conn->query("UPDATE academic_sessions SET is_current=0");
-            }
-            $stmt = $conn->prepare("INSERT INTO academic_sessions (session_name, start_date, end_date, is_current) VALUES (?,?,?,?)");
-            $stmt->bind_param("sssi", $name, $start, $end, $curr);
-            if ($stmt->execute()) {
-                $new_sess_id = $conn->insert_id;
-                // Auto-create three terms for this session
-                $term_defs = [
-                    ['First Term',  '09-01', '12-15'],
-                    ['Second Term', '01-06', '04-15'],
-                    ['Third Term',  '04-28', '08-15'],
-                ];
-                $year = substr($name, 0, 4);
-                $next = intval($year) + 1;
-                foreach ($term_defs as $td) {
-                    $t_start = ($td[0]==='First Term' ? $year : $next).'-'.$td[1];
-                    $t_end   = ($td[0]==='Third Term'  ? $next : ($td[0]==='Second Term' ? $next : $year)).'-'.$td[2];
-                    $tstmt = $conn->prepare("INSERT IGNORE INTO terms (term_name, session_id, start_date, end_date, is_current) VALUES (?,?,?,?,0)");
-                    $tstmt->bind_param("siss", $td[0], $new_sess_id, $t_start, $t_end);
-                    $tstmt->execute();
+            // Work out the three terms FIRST — the dates the admin entered, or
+            // the defaults for any term left blank — and check them before
+            // creating anything, so a bad date can't leave a half-made session.
+            $start_year = intval($ym[1]);
+            $planned = [];
+            foreach (TERM_NAMES as $i => $tn) {
+                $n  = $i + 1;
+                $ts = trim($_POST["t{$n}_start"] ?? '');
+                $te = trim($_POST["t{$n}_end"]   ?? '');
+                if ($ts === '' && $te === '') {
+                    [$ts, $te] = term_default_dates($start_year, $tn);
                 }
-                logActivity('add_session', "Added session: $name");
-                $success = "Session <strong>$name</strong> added with three terms auto-created.";
+                $planned[] = ['term_name' => $tn, 'start_date' => $ts, 'end_date' => $te];
+            }
+            $term_error = '';
+            foreach ($planned as $i => $p) {
+                $msg = term_check_dates($p['start_date'], $p['end_date'], array_slice($planned, 0, $i));
+                if ($msg) { $term_error = $p['term_name'] . ': ' . $msg; break; }
+            }
+
+            if ($term_error) {
+                $error = $term_error;
             } else {
-                $error = 'Failed to add session: '.$conn->error;
+                try {
+                    $conn->begin_transaction();
+                    if ($curr) $conn->query("UPDATE academic_sessions SET is_current=0");
+                    $stmt = $conn->prepare("INSERT INTO academic_sessions (session_name, start_date, end_date, is_current) VALUES (?,?,?,?)");
+                    $stmt->bind_param("sssi", $name, $start, $end, $curr);
+                    if (!$stmt->execute()) throw new Exception('session insert failed');
+                    $new_sess_id = $conn->insert_id;
+                    $tstmt = $conn->prepare("INSERT INTO terms (term_name, session_id, start_date, end_date, is_current) VALUES (?,?,?,?,0)");
+                    foreach ($planned as $p) {
+                        $tstmt->bind_param("siss", $p['term_name'], $new_sess_id, $p['start_date'], $p['end_date']);
+                        if (!$tstmt->execute()) throw new Exception('term insert failed');
+                    }
+                    $conn->commit();
+                    logActivity('add_session', "Added session: $name");
+                    $success = "Session <strong>$name</strong> added with its three terms.";
+                } catch (Throwable $e) {
+                    $conn->rollback();
+                    $error = 'Could not add the session — nothing was saved. Please try again.';
+                }
             }
         }
         $tab = 'session';
@@ -69,8 +134,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $t_end     = trim($_POST['term_end']   ?? '');
         $t_curr    = isset($_POST['term_is_current']) ? 1 : 0;
 
+        $sess_exists = $sess_id ? $conn->query("SELECT id FROM academic_sessions WHERE id=$sess_id")->fetch_assoc() : null;
+        $existing    = $sess_exists ? term_siblings($conn, $sess_id) : [];
+
         if (!$sess_id || !$term_name || !$t_start || !$t_end) {
             $error = 'All term fields are required.';
+        } elseif (!$sess_exists) {
+            $error = 'That session no longer exists.';
+        } elseif (!in_array($term_name, TERM_NAMES, true)) {
+            $error = 'Choose First Term, Second Term or Third Term.';
+        } elseif (count($existing) >= MAX_TERMS_PER_SESSION) {
+            $error = 'A session can only have ' . MAX_TERMS_PER_SESSION . ' terms, and this one already has them all.';
+        } elseif (in_array($term_name, array_column($existing, 'term_name'), true)) {
+            $error = $term_name . ' already exists in this session.';
+        } elseif (($msg = term_check_dates($t_start, $t_end, $existing)) !== '') {
+            $error = $term_name . ': ' . $msg;
         } else {
             if ($t_curr) {
                 $conn->query("UPDATE terms SET is_current=0 WHERE session_id=$sess_id");
@@ -78,10 +156,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             $stmt = $conn->prepare("INSERT INTO terms (term_name, session_id, start_date, end_date, is_current) VALUES (?,?,?,?,?)");
             $stmt->bind_param("sissi", $term_name, $sess_id, $t_start, $t_end, $t_curr);
             if ($stmt->execute()) {
-                $success = "Term added successfully.";
+                logActivity('add_term', "Added $term_name to session id $sess_id");
+                $success = $term_name . ' added.';
             } else {
-                $error = 'Failed: '.$conn->error;
+                $error = 'Could not add the term.';
             }
+        }
+        $tab = 'session';
+    }
+
+    if ($_POST['action'] === 'edit_term') {
+        $tid     = intval($_POST['term_id'] ?? 0);
+        $t_start = trim($_POST['term_start'] ?? '');
+        $t_end   = trim($_POST['term_end']   ?? '');
+
+        $stmt = $conn->prepare("SELECT id, term_name, session_id FROM terms WHERE id=?");
+        $stmt->bind_param("i", $tid);
+        $stmt->execute();
+        $term = $stmt->get_result()->fetch_assoc();
+
+        if (!$term) {
+            $error = 'That term no longer exists.';
+        } elseif (($msg = term_check_dates($t_start, $t_end, term_siblings($conn, (int)$term['session_id'], $tid))) !== '') {
+            $error = $term['term_name'] . ': ' . $msg;
+        } else {
+            $stmt = $conn->prepare("UPDATE terms SET start_date=?, end_date=? WHERE id=?");
+            $stmt->bind_param("ssi", $t_start, $t_end, $tid);
+            $stmt->execute();
+            logActivity('edit_term', "Changed {$term['term_name']} dates (term id $tid) to $t_start – $t_end");
+            $success = $term['term_name'] . ' dates updated.';
         }
         $tab = 'session';
     }
@@ -191,7 +294,7 @@ $calendar  = $conn->query("SELECT * FROM academic_calendar WHERE session_id=$cal
 
 // ── Fetch sessions & terms for the Session & Term tab ───────────────────────────
 $all_sessions = getAllSessions($conn);
-$terms_all    = $conn->query("SELECT * FROM terms ORDER BY session_id DESC, id ASC")->fetch_all(MYSQLI_ASSOC);
+$terms_all    = $conn->query("SELECT * FROM terms ORDER BY session_id DESC, term_name ASC, id ASC")->fetch_all(MYSQLI_ASSOC);
 $terms_by_session = [];
 foreach ($terms_all as $t) {
     $terms_by_session[$t['session_id']][] = $t;
@@ -284,7 +387,10 @@ $cat_colors = [
 <?php else: ?>
 <div class="space-y-6">
     <?php foreach ($all_sessions as $sess):
-        $sess_terms = $terms_by_session[$sess['id']] ?? [];
+        $sess_terms      = $terms_by_session[$sess['id']] ?? [];
+        $term_count      = count($sess_terms);
+        $available_names = array_values(array_diff(TERM_NAMES, array_column($sess_terms, 'term_name')));
+        $can_add_term    = $term_count < MAX_TERMS_PER_SESSION && !empty($available_names);
     ?>
     <div class="bg-white rounded-xl border <?php echo $sess['is_current'] ? 'border-gold ring-2 ring-gold/20' : 'border-slate-200'; ?> overflow-hidden">
         <!-- Session Header -->
@@ -303,6 +409,7 @@ $cat_colors = [
                     <p class="text-xs text-slate-500">
                         <?php echo date('M j, Y', strtotime($sess['start_date'])); ?> —
                         <?php echo date('M j, Y', strtotime($sess['end_date'])); ?>
+                        · <?php echo $term_count; ?>/<?php echo MAX_TERMS_PER_SESSION; ?> terms
                     </p>
                 </div>
             </div>
@@ -316,10 +423,12 @@ $cat_colors = [
                     </button>
                 </form>
                 <?php endif; ?>
-                <button onclick="openAddTermModal(<?php echo $sess['id']; ?>, '<?php echo htmlspecialchars($sess['session_name']); ?>')"
+                <?php if ($can_add_term): ?>
+                <button onclick="openAddTermModal(<?php echo $sess['id']; ?>, <?php echo htmlspecialchars(json_encode($sess['session_name']), ENT_QUOTES); ?>, <?php echo htmlspecialchars(json_encode($available_names), ENT_QUOTES); ?>)"
                     class="px-3 py-1.5 bg-slate-100 text-slate-700 text-xs font-semibold rounded-lg hover:bg-slate-200 transition-all inline-flex items-center gap-1">
                     <span class="material-symbols-outlined text-xs">add</span>Add Term
                 </button>
+                <?php endif; ?>
                 <?php if (hasPermission('super_admin') && !$sess['is_current']): ?>
                 <form method="POST" class="inline" onsubmit="return confirm('Delete this session? This cannot be undone.')">
                     <input type="hidden" name="action"     value="delete_session">
@@ -334,6 +443,12 @@ $cat_colors = [
 
         <!-- Terms for this session -->
         <div class="p-4">
+            <?php if ($term_count > MAX_TERMS_PER_SESSION): ?>
+            <div class="mb-3 p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-700 flex items-start gap-2">
+                <span class="material-symbols-outlined text-sm flex-shrink-0">warning</span>
+                <span>This session has <?php echo $term_count; ?> terms, but only <?php echo MAX_TERMS_PER_SESSION; ?> are allowed. The extras were added before this limit existed, and no more can be added.</span>
+            </div>
+            <?php endif; ?>
             <?php if (empty($sess_terms)): ?>
             <p class="text-center text-sm text-slate-400 py-4">No terms — click "Add Term" above.</p>
             <?php else: ?>
@@ -365,13 +480,20 @@ $cat_colors = [
                         <?php echo date('d M Y', strtotime($term['start_date'])); ?> —
                         <?php echo date('d M Y', strtotime($term['end_date'])); ?>
                     </p>
-                    <?php if ($t_today): ?>
-                    <span class="mt-2 inline-block px-2 py-0.5 bg-green-100 text-green-700 text-xs font-semibold rounded-full">In Progress</span>
-                    <?php elseif (time() > strtotime($term['end_date'])): ?>
-                    <span class="mt-2 inline-block px-2 py-0.5 bg-slate-100 text-slate-500 text-xs font-semibold rounded-full">Completed</span>
-                    <?php else: ?>
-                    <span class="mt-2 inline-block px-2 py-0.5 bg-blue-100 text-blue-600 text-xs font-semibold rounded-full">Upcoming</span>
-                    <?php endif; ?>
+                    <div class="mt-2 flex items-center justify-between gap-2">
+                        <?php if ($t_today): ?>
+                        <span class="inline-block px-2 py-0.5 bg-green-100 text-green-700 text-xs font-semibold rounded-full">In Progress</span>
+                        <?php elseif (time() > strtotime($term['end_date'])): ?>
+                        <span class="inline-block px-2 py-0.5 bg-slate-100 text-slate-500 text-xs font-semibold rounded-full">Completed</span>
+                        <?php else: ?>
+                        <span class="inline-block px-2 py-0.5 bg-blue-100 text-blue-600 text-xs font-semibold rounded-full">Upcoming</span>
+                        <?php endif; ?>
+                        <button type="button"
+                            onclick="openEditTermModal(<?php echo htmlspecialchars(json_encode(['id' => (int)$term['id'], 'name' => $term['term_name'], 'session' => $sess['session_name'], 'start' => $term['start_date'], 'end' => $term['end_date']]), ENT_QUOTES); ?>)"
+                            class="text-xs text-slate-500 hover:text-primary font-semibold inline-flex items-center gap-0.5 hover:underline">
+                            <span class="material-symbols-outlined text-sm">edit_calendar</span>Edit dates
+                        </button>
+                    </div>
                 </div>
                 <?php endforeach; ?>
             </div>
@@ -382,9 +504,13 @@ $cat_colors = [
 </div>
 <?php endif; ?>
 
+<?php
+// If adding a session just failed validation, keep what was typed and reopen the form.
+$old_session = ($error && ($_POST['action'] ?? '') === 'add_session') ? $_POST : [];
+?>
 <!-- Add Session Modal -->
 <div id="addSessionModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-<div class="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl">
+<div class="bg-white rounded-2xl p-8 max-w-xl w-full shadow-2xl max-h-[90vh] overflow-y-auto">
     <h2 class="text-xl font-bold text-slate-900 mb-5 flex items-center gap-2">
         <span class="material-symbols-outlined text-gold">calendar_add_on</span>
         Add New Academic Session
@@ -393,7 +519,7 @@ $cat_colors = [
         <input type="hidden" name="action" value="add_session">
         <div>
             <label class="text-xs font-semibold text-slate-600 mb-1 block">Session Name <span class="text-red-500">*</span></label>
-            <input type="text" name="session_name" required placeholder="e.g. 2025/2026"
+            <input type="text" name="session_name" id="sessionNameInput" required placeholder="e.g. 2025/2026" value="<?php echo htmlspecialchars($old_session['session_name'] ?? ''); ?>"
                 class="w-full border-slate-200 rounded-xl text-sm focus:ring-gold focus:border-gold"
                 pattern="\d{4}/\d{4}" title="Format: YYYY/YYYY">
             <p class="text-xs text-slate-400 mt-1">Format: 2025/2026</p>
@@ -401,23 +527,34 @@ $cat_colors = [
         <div class="grid grid-cols-2 gap-3">
             <div>
                 <label class="text-xs font-semibold text-slate-600 mb-1 block">Start Date <span class="text-red-500">*</span></label>
-                <input type="date" name="start_date" required
+                <input type="date" name="start_date" required value="<?php echo htmlspecialchars($old_session['start_date'] ?? ''); ?>"
                     class="w-full border-slate-200 rounded-xl text-sm focus:ring-gold focus:border-gold">
             </div>
             <div>
                 <label class="text-xs font-semibold text-slate-600 mb-1 block">End Date <span class="text-red-500">*</span></label>
-                <input type="date" name="end_date" required
+                <input type="date" name="end_date" required value="<?php echo htmlspecialchars($old_session['end_date'] ?? ''); ?>"
                     class="w-full border-slate-200 rounded-xl text-sm focus:ring-gold focus:border-gold">
             </div>
         </div>
         <label class="flex items-center gap-2 cursor-pointer">
-            <input type="checkbox" name="is_current" class="rounded text-gold focus:ring-gold">
+            <input type="checkbox" name="is_current" class="rounded text-gold focus:ring-gold" <?php echo !empty($old_session['is_current']) ? 'checked' : ''; ?>>
             <span class="text-sm font-semibold text-slate-700">Set as Current Session</span>
         </label>
-        <p class="text-xs text-blue-600 bg-blue-50 rounded-lg p-3">
-            <span class="material-symbols-outlined text-xs align-middle">info</span>
-            Three terms will be auto-created based on the session year. You can edit their dates after.
-        </p>
+        <div class="border-t border-slate-100 pt-4">
+            <p class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Term dates</p>
+            <p class="text-xs text-slate-400 mb-3">Every session has exactly three terms. Dates fill in from the session name — change any that don't match your calendar. You can edit them later too.</p>
+            <div class="space-y-2">
+                <?php foreach (TERM_NAMES as $i => $tn): $n = $i + 1; ?>
+                <div class="grid grid-cols-[5.5rem_1fr_1fr] items-center gap-2">
+                    <span class="text-xs font-semibold text-slate-600"><?php echo $tn; ?></span>
+                    <input type="date" name="t<?php echo $n; ?>_start" id="t<?php echo $n; ?>_start" aria-label="<?php echo $tn; ?> start" value="<?php echo htmlspecialchars($old_session["t{$n}_start"] ?? ''); ?>"
+                        class="w-full border-slate-200 rounded-xl text-sm focus:ring-gold focus:border-gold">
+                    <input type="date" name="t<?php echo $n; ?>_end" id="t<?php echo $n; ?>_end" aria-label="<?php echo $tn; ?> end" value="<?php echo htmlspecialchars($old_session["t{$n}_end"] ?? ''); ?>"
+                        class="w-full border-slate-200 rounded-xl text-sm focus:ring-gold focus:border-gold">
+                </div>
+                <?php endforeach; ?>
+            </div>
+        </div>
         <div class="flex gap-3 pt-2">
             <button type="submit" class="flex-1 bg-gold text-primary py-3 rounded-xl font-bold hover:bg-gold/90">Add Session</button>
             <button type="button" onclick="document.getElementById('addSessionModal').classList.add('hidden')"
@@ -440,20 +577,17 @@ $cat_colors = [
         <input type="hidden" name="sess_id"  id="termModalSessId">
         <div>
             <label class="text-xs font-semibold text-slate-600 mb-1 block">Term <span class="text-red-500">*</span></label>
-            <select name="term_name" required class="w-full border-slate-200 rounded-xl text-sm focus:ring-gold focus:border-gold">
-                <option value="First Term">First Term</option>
-                <option value="Second Term">Second Term</option>
-                <option value="Third Term">Third Term</option>
-            </select>
+            <!-- Options are filled in by openAddTermModal(): only the terms this session doesn't have yet -->
+            <select name="term_name" id="addTermSelect" required class="w-full border-slate-200 rounded-xl text-sm focus:ring-gold focus:border-gold"></select>
         </div>
         <div class="grid grid-cols-2 gap-3">
             <div>
                 <label class="text-xs font-semibold text-slate-600 mb-1 block">Start Date <span class="text-red-500">*</span></label>
-                <input type="date" name="term_start" required class="w-full border-slate-200 rounded-xl text-sm focus:ring-gold focus:border-gold">
+                <input type="date" name="term_start" id="addTermStart" required class="w-full border-slate-200 rounded-xl text-sm focus:ring-gold focus:border-gold">
             </div>
             <div>
                 <label class="text-xs font-semibold text-slate-600 mb-1 block">End Date <span class="text-red-500">*</span></label>
-                <input type="date" name="term_end" required class="w-full border-slate-200 rounded-xl text-sm focus:ring-gold focus:border-gold">
+                <input type="date" name="term_end" id="addTermEnd" required class="w-full border-slate-200 rounded-xl text-sm focus:ring-gold focus:border-gold">
             </div>
         </div>
         <label class="flex items-center gap-2 cursor-pointer">
@@ -469,14 +603,102 @@ $cat_colors = [
 </div>
 </div>
 
+<!-- Edit Term Dates Modal -->
+<div id="editTermModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+<div class="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl">
+    <h2 class="text-xl font-bold text-slate-900 mb-1 flex items-center gap-2">
+        <span class="material-symbols-outlined text-gold">edit_calendar</span>
+        Edit Term Dates
+    </h2>
+    <p id="editTermLabel" class="text-sm text-slate-500 mb-5"></p>
+    <form method="POST" class="space-y-4">
+        <input type="hidden" name="action"  value="edit_term">
+        <input type="hidden" name="term_id" id="editTermId">
+        <div class="grid grid-cols-2 gap-3">
+            <div>
+                <label class="text-xs font-semibold text-slate-600 mb-1 block">Start Date <span class="text-red-500">*</span></label>
+                <input type="date" name="term_start" id="editTermStart" required class="w-full border-slate-200 rounded-xl text-sm focus:ring-gold focus:border-gold">
+            </div>
+            <div>
+                <label class="text-xs font-semibold text-slate-600 mb-1 block">End Date <span class="text-red-500">*</span></label>
+                <input type="date" name="term_end" id="editTermEnd" required class="w-full border-slate-200 rounded-xl text-sm focus:ring-gold focus:border-gold">
+            </div>
+        </div>
+        <p class="text-xs text-slate-400">Terms in the same session can't overlap each other.</p>
+        <div class="flex gap-3 pt-2">
+            <button type="submit" class="flex-1 bg-gold text-primary py-3 rounded-xl font-bold hover:bg-gold/90">Save Dates</button>
+            <button type="button" onclick="document.getElementById('editTermModal').classList.add('hidden')"
+                class="flex-1 bg-slate-100 text-slate-700 py-3 rounded-xl font-semibold hover:bg-slate-200">Cancel</button>
+        </div>
+    </form>
+</div>
+</div>
+
 <script>
-function openAddTermModal(sessId, sessName) {
+// Default dates for a term, from the year its session starts in — the same
+// defaults the server uses, so what you see pre-filled is what you'd get.
+function termDefaults(startYear, termName) {
+    const y = parseInt(startYear, 10), n = y + 1;
+    if (termName === 'First Term')  return [y + '-09-01', y + '-12-15'];
+    if (termName === 'Second Term') return [n + '-01-06', n + '-04-15'];
+    return [n + '-04-28', n + '-08-15'];
+}
+
+// ── Add Term ──
+function openAddTermModal(sessId, sessName, availableNames) {
     document.getElementById('termModalSessId').value = sessId;
     document.getElementById('termModalSessionLabel').textContent = 'For session: ' + sessName;
+    const select = document.getElementById('addTermSelect');
+    select.innerHTML = availableNames.map(n => '<option value="' + n + '">' + n + '</option>').join('');
+    select.dataset.year = sessName.substring(0, 4);
+    fillAddTermDates();
     document.getElementById('addTermModal').classList.remove('hidden');
 }
+function fillAddTermDates() {
+    const select = document.getElementById('addTermSelect');
+    if (!select.value) return;
+    const d = termDefaults(select.dataset.year, select.value);
+    document.getElementById('addTermStart').value = d[0];
+    document.getElementById('addTermEnd').value   = d[1];
+}
+document.getElementById('addTermSelect').addEventListener('change', fillAddTermDates);
+
+// ── Edit Term ──
+function openEditTermModal(t) {
+    document.getElementById('editTermId').value = t.id;
+    document.getElementById('editTermLabel').textContent = t.name + ' — ' + t.session + ' session';
+    document.getElementById('editTermStart').value = t.start;
+    document.getElementById('editTermEnd').value   = t.end;
+    document.getElementById('editTermModal').classList.remove('hidden');
+}
+
+// ── Add Session: pre-fill the three terms' dates from the session name ──
+// A date the admin types themselves is never overwritten by the auto-fill.
+(function () {
+    const nameInput = document.getElementById('sessionNameInput');
+    const fields = [1, 2, 3].map(n => [document.getElementById('t' + n + '_start'), document.getElementById('t' + n + '_end')]);
+    const names = ['First Term', 'Second Term', 'Third Term'];
+
+    nameInput.addEventListener('input', function () {
+        const m = this.value.match(/^(\d{4})\/(\d{4})$/);
+        if (!m) return;
+        fields.forEach(function (pair, i) {
+            const d = termDefaults(m[1], names[i]);
+            [[pair[0], d[0]], [pair[1], d[1]]].forEach(function (x) {
+                if (!x[0].value || x[0].dataset.auto === '1') { x[0].value = x[1]; x[0].dataset.auto = '1'; }
+            });
+        });
+    });
+    fields.forEach(pair => pair.forEach(el => el.addEventListener('input', () => { el.dataset.auto = ''; })));
+})();
+
+<?php if (!empty($old_session)): ?>
+// The last attempt to add a session failed — show the form again with what was typed.
+document.getElementById('addSessionModal').classList.remove('hidden');
+<?php endif; ?>
+
 // Close modals on backdrop click
-['addSessionModal','addTermModal'].forEach(id => {
+['addSessionModal','addTermModal','editTermModal'].forEach(id => {
     document.getElementById(id).addEventListener('click', function(e) {
         if (e.target === this) this.classList.add('hidden');
     });
