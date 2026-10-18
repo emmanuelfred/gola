@@ -4,6 +4,23 @@ require_once 'includes/permission_helper.php';
 requirePermission('students');
 require_once 'includes/session_helper.php';
 require_once 'includes/enrollment_helper.php';
+// Next free registration number for a joining year: GOLA/2026/001, GOLA/2026/002, …
+// ONE running number for the whole school per year — not per class — and the
+// class is deliberately NOT part of it: a student moves up through the classes
+// over the years, but their registration number stays theirs for life.
+// Older numbers that still carry a class (GOLA/2026/JSS1/001) don't match the
+// pattern below, so they're ignored here and can never clash with new ones.
+function next_student_reg_no(mysqli $conn, int $year): string {
+    $prefix  = "GOLA/$year/";
+    $pattern = '^GOLA/' . $year . '/[0-9]+$';
+    $from    = strlen($prefix) + 1;
+    $stmt = $conn->prepare("SELECT COALESCE(MAX(CAST(SUBSTRING(student_id, ?) AS UNSIGNED)), 0) AS n FROM students WHERE student_id REGEXP ?");
+    $stmt->bind_param("is", $from, $pattern);
+    $stmt->execute();
+    $max = (int) $stmt->get_result()->fetch_assoc()['n'];
+    return $prefix . str_pad((string) ($max + 1), 3, '0', STR_PAD_LEFT);
+}
+
 $page_title = "Register Student";
 $errors = [];
 $success = '';
@@ -42,21 +59,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if (empty($errors)) {
-        // Auto-generate student ID
-        $class_row = $conn->query("SELECT class_name, arm FROM classes WHERE id = $class_id")->fetch_assoc();
-        $class_code = str_replace(' ', '', $class_row['class_name']);
-        $year = date('Y');
-        $count_q = $conn->query("SELECT COUNT(*) as c FROM students WHERE class_id = $class_id");
-        $count = $count_q->fetch_assoc()['c'] + 1;
-        $student_id = 'GOLA/' . $year . '/' . str_pad($count, 3, '0', STR_PAD_LEFT);
-
-        // Ensure unique
-        $check = $conn->prepare("SELECT id FROM students WHERE student_id = ?");
-        $check->bind_param("s", $student_id);
-        $check->execute();
-        if ($check->get_result()->num_rows > 0) {
-            $student_id .= '-' . rand(10, 99);
-        }
+        // Registration number = GOLA/<year joined>/<running number>, e.g. GOLA/2026/014.
+        // It's picked at the moment of saving (see below), not here.
+        $year = (int) date('Y');
+        $student_id = '';
 
         $session_id = intval($_POST['session_id'] ?? 0) ?: null;
         
@@ -93,7 +99,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_POST['reason_for_leaving'], $_POST['transfer_cert_number'], $_POST['previous_performance'], $date_left
         );
 
-        if ($stmt->execute()) {
+        // Pick the next number and save. If two people register a student at the
+        // very same moment they could pick the same number; the database refuses
+        // the duplicate, so we simply pick again (a few tries is plenty).
+        $inserted = false;
+        $last_errno = 0;
+        for ($attempt = 1; $attempt <= 8 && !$inserted; $attempt++) {
+            $student_id = next_student_reg_no($conn, $year);
+            try {
+                $inserted = $stmt->execute();
+            } catch (mysqli_sql_exception $e) {
+                $last_errno = (int) $e->getCode();
+                if ($last_errno !== 1062) throw $e;           // only "number already taken" is retried
+                usleep(random_int(5000, 50000));              // short random pause so two clashing saves stop moving in lockstep
+                continue;
+            }
+            if (!$inserted) {                                  // (older PHP returns false instead of throwing)
+                $last_errno = $stmt->errno;
+                if ($last_errno !== 1062) break;
+                usleep(random_int(5000, 50000));
+            }
+        }
+        if (!$inserted) {
+            // Remember what went wrong, then clear it: PHP keeps a failed statement's
+            // error "pending" and would re-throw it from the next query result
+            // (the Class dropdown further down this page) instead of showing our message.
+            $db_error = $conn->error;
+            $conn->query('SELECT 1');
+        }
+
+        if ($inserted) {
             $new_student_db_id = $conn->insert_id;
             logActivity('register_student', 'Registered student: ' . $first_name . ' ' . $last_name . ' (' . $student_id . ')');
 
@@ -108,7 +143,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $success = "Student registered successfully! Registration Number: <strong>" . $student_id . "</strong>";
         } else {
-            $errors[] = 'Database error: ' . $conn->error;
+            $errors[] = ($last_errno === 1062)
+                ? 'Several students were being registered at the same moment and no number could be reserved. Nothing was saved — please press Register again.'
+                : 'Database error: ' . $db_error;
         }
     }
 }
@@ -191,7 +228,7 @@ $nigerian_states = ['Abia','Adamawa','Akwa Ibom','Anambra','Bauchi','Bayelsa','B
                 <div class="bg-white rounded-xl border border-slate-200 p-6">
                     <h2 class="section-title flex items-center gap-2"><span class="material-symbols-outlined text-sm">school</span> 2. Admission Information</h2>
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div class="md:col-span-3 p-3 bg-blue-50 rounded-lg text-sm text-blue-700"><span class="material-symbols-outlined text-sm align-middle">info</span> Registration Number will be auto-generated upon submission.</div>
+                        <div class="md:col-span-3 p-3 bg-blue-50 rounded-lg text-sm text-blue-700"><span class="material-symbols-outlined text-sm align-middle">info</span> Registration Number is generated when you submit (like GOLA/<?php echo date('Y'); ?>/014). It doesn't include the class, so it stays the same for life — even when the student moves to another class.</div>
                         <div><label class="text-xs font-semibold text-slate-600">Admission Date</label><input type="date" name="admission_date" value="<?php echo date('Y-m-d'); ?>" class="mt-1 w-full border-slate-200 rounded-lg text-sm focus:ring-gold focus:border-gold"></div>
                         <div><label class="text-xs font-semibold text-slate-600">Class *</label><select name="class_id" required class="mt-1 w-full border-slate-200 rounded-lg text-sm focus:ring-gold focus:border-gold"><option value="">Select Class</option><?php $classes->data_seek(0); while($c=$classes->fetch_assoc()): ?><option value="<?php echo $c['id']; ?>"><?php echo $c['class_name'].' '.$c['arm']; ?></option><?php endwhile; ?></select></div>
                         <div><label class="text-xs font-semibold text-slate-600">Session</label><select name="session_id" class="mt-1 w-full border-slate-200 rounded-lg text-sm focus:ring-gold focus:border-gold"><option value="">Select</option><?php while($s=$sessions->fetch_assoc()): ?><option value="<?php echo $s['id']; ?>"><?php echo $s['session_name']; ?></option><?php endwhile; ?></select></div>

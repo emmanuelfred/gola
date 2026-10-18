@@ -28,6 +28,45 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         }
     }
 
+    if ($_POST['action'] === 'edit_category') {
+        $cid  = intval($_POST['category_id'] ?? 0);
+        $name = trim($_POST['name'] ?? '');
+        if (!$cid || $name === '') {
+            $error = 'Category name cannot be empty.';
+        } else {
+            $dup = $conn->prepare("SELECT id FROM fee_categories WHERE name = ? AND id <> ?");
+            $dup->bind_param("si", $name, $cid);
+            $dup->execute();
+            if ($dup->get_result()->num_rows > 0) {
+                $error = "Another category is already called \"$name\".";
+            } else {
+                $stmt = $conn->prepare("UPDATE fee_categories SET name = ? WHERE id = ?");
+                $stmt->bind_param("si", $name, $cid);
+                $stmt->execute();
+                logActivity('edit_fee_category', "Renamed fee category $cid to $name");
+                $success = "Category renamed to \"$name\".";
+            }
+        }
+    }
+
+    if ($_POST['action'] === 'delete_category') {
+        $cid = intval($_POST['category_id'] ?? 0);
+        $q = $conn->prepare("SELECT name FROM fee_categories WHERE id = ?");
+        $q->bind_param("i", $cid);
+        $q->execute();
+        $row = $q->get_result()->fetch_assoc();
+        if (!$row) {
+            $error = 'That category no longer exists.';
+        } else {
+            // fee_structure rows go with it (FK cascade). Payments are NOT touched.
+            $del = $conn->prepare("DELETE FROM fee_categories WHERE id = ?");
+            $del->bind_param("i", $cid);
+            $del->execute();
+            logActivity('delete_fee_category', "Deleted fee category $cid ({$row['name']})");
+            $success = "Category \"{$row['name']}\" deleted.";
+        }
+    }
+
     if ($_POST['action'] === 'add_category') {
         $name = trim($_POST['name'] ?? '');
         if ($name) {
@@ -38,24 +77,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 $success = "Category \"" . htmlspecialchars($name) . "\" added.";
             } else {
                 $error = 'That category may already exist.';
-            }
-        }
-    }
-
-    if ($_POST['action'] === 'delete_category') {
-        $cat_id = intval($_POST['category_id'] ?? 0);
-        if ($cat_id) {
-            try {
-                $stmt = $conn->prepare("DELETE FROM fee_categories WHERE id = ?");
-                $stmt->bind_param("i", $cat_id);
-                if ($stmt->execute() && $stmt->affected_rows > 0) {
-                    logActivity('delete_fee_category', "Deleted fee category $cat_id");
-                    $success = "Category deleted.";
-                } else {
-                    $error = 'Category could not be deleted. It may no longer exist or is still in use.';
-                }
-            } catch (mysqli_sql_exception $e) {
-                $error = 'This category is still in use (fees or payments reference it), so it cannot be deleted.';
             }
         }
     }
@@ -70,7 +91,14 @@ $sessions = getAllSessions($conn);
 $terms_by_session = [];
 foreach (getAllTerms($conn) as $t) $terms_by_session[$t['session_id']][] = $t;
 $classes  = $conn->query("SELECT id, class_name, arm, class_level FROM classes ORDER BY class_level DESC, class_name, arm")->fetch_all(MYSQLI_ASSOC);
-$categories = getFeeCategories($conn);
+$categories = $conn->query(
+    "SELECT c.id, c.name,
+            COUNT(CASE WHEN fs.amount > 0 THEN 1 END) AS used_in
+       FROM fee_categories c
+       LEFT JOIN fee_structure fs ON fs.category_id = c.id
+      GROUP BY c.id, c.name, c.display_order
+      ORDER BY c.display_order, c.name"
+)->fetch_all(MYSQLI_ASSOC);
 
 $rate_card = [];
 $class_total = 0;
@@ -103,10 +131,16 @@ if ($class_id && $session_id && $term_id) {
         <h1 class="text-2xl font-bold text-slate-900">Fee Structure</h1>
         <p class="text-slate-500 text-sm mt-1 max-w-2xl">Set each category's amount per class, per term. A student's total fee for the term is these added together, plus any personal adjustment.</p>
     </div>
-    <button onclick="document.getElementById('addCatModal').classList.remove('hidden')"
-        class="inline-flex items-center gap-2 bg-white border border-slate-200 px-4 py-2.5 rounded-xl font-semibold text-sm text-slate-700 hover:bg-slate-50">
-        <span class="material-symbols-outlined text-sm">add</span>New Category
-    </button>
+    <div class="flex gap-2">
+        <button onclick="document.getElementById('manageCatModal').classList.remove('hidden')"
+            class="inline-flex items-center gap-2 bg-white border border-slate-200 px-4 py-2.5 rounded-xl font-semibold text-sm text-slate-700 hover:bg-slate-50">
+            <span class="material-symbols-outlined text-sm">tune</span>Manage Categories
+        </button>
+        <button onclick="document.getElementById('addCatModal').classList.remove('hidden')"
+            class="inline-flex items-center gap-2 bg-white border border-slate-200 px-4 py-2.5 rounded-xl font-semibold text-sm text-slate-700 hover:bg-slate-50">
+            <span class="material-symbols-outlined text-sm">add</span>New Category
+        </button>
+    </div>
 </div>
 
 <?php if ($success): ?>
@@ -166,11 +200,6 @@ if ($class_id && $session_id && $term_id) {
                 <span class="text-slate-400">&#8358;</span>
                 <input type="number" step="0.01" min="0" name="amount[<?php echo $row['category_id']; ?>]" value="<?php echo number_format($row['amount'],2,'.',''); ?>"
                     class="w-48 border-slate-200 rounded-lg text-sm focus:ring-gold focus:border-gold">
-                <button type="button" title="Delete category"
-                    onclick="deleteCategory(<?php echo (int)$row['category_id']; ?>, <?php echo htmlspecialchars(json_encode($row['name']), ENT_QUOTES); ?>)"
-                    class="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg">
-                    <span class="material-symbols-outlined text-lg">delete</span>
-                </button>
             </div>
             <?php endforeach; ?>
         </div>
@@ -181,16 +210,7 @@ if ($class_id && $session_id && $term_id) {
         </div>
     </form>
 </div>
-<form id="deleteCatForm" method="POST" class="hidden">
-    <input type="hidden" name="action" value="delete_category">
-    <input type="hidden" name="category_id" id="deleteCatId">
-</form>
 <script>
-function deleteCategory(id, name) {
-    if (!confirm('Delete the "' + name + '" category?\n\nThis removes it for ALL classes and terms and cannot be undone.')) return;
-    document.getElementById('deleteCatId').value = id;
-    document.getElementById('deleteCatForm').submit();
-}
 document.querySelectorAll('input[name^="amount"]').forEach(inp => {
     inp.addEventListener('input', () => {
         let total = 0;
@@ -210,6 +230,48 @@ document.querySelectorAll('input[name^="amount"]').forEach(inp => {
 </main>
 </div>
 </div>
+
+<!-- Manage Categories Modal -->
+<div id="manageCatModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+<div class="bg-white rounded-2xl p-6 max-w-lg w-full shadow-2xl max-h-[90vh] overflow-y-auto">
+    <h2 class="text-xl font-bold text-slate-900 mb-1 flex items-center gap-2"><span class="material-symbols-outlined text-gold">tune</span>Manage Fee Categories</h2>
+    <p class="text-xs text-slate-500 mb-4">Rename a category or delete it. Deleting removes it from every class's fee structure, so totals for past terms change too. Recorded payments are never deleted.</p>
+    <?php if (!$categories): ?>
+        <p class="text-sm text-slate-400 py-6 text-center">No categories yet.</p>
+    <?php endif; ?>
+    <div class="space-y-2">
+    <?php foreach ($categories as $c): ?>
+        <div class="flex items-center gap-2 border border-slate-200 rounded-xl p-2">
+            <form method="POST" class="flex-1 flex items-center gap-2">
+                <input type="hidden" name="action" value="edit_category">
+                <input type="hidden" name="category_id" value="<?php echo (int)$c['id']; ?>">
+                <input type="text" name="name" required maxlength="100" value="<?php echo htmlspecialchars($c['name']); ?>"
+                    class="flex-1 min-w-0 border-slate-200 rounded-lg text-sm focus:ring-gold focus:border-gold">
+                <button type="submit" title="Save name" class="px-3 py-2 text-xs font-bold bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-700">Rename</button>
+            </form>
+            <form method="POST" onsubmit="return confirm(<?php echo htmlspecialchars(json_encode(
+                    'Delete "'.$c['name'].'"?' . ($c['used_in'] > 0
+                        ? "\n\nIt has an amount set in ".$c['used_in']." class/term fee entr".($c['used_in']==1?'y':'ies').". Those totals will drop. Payments already recorded are kept."
+                        : "\n\nIt has no amounts set, so no totals change.")
+                ), ENT_QUOTES); ?>);">
+                <input type="hidden" name="action" value="delete_category">
+                <input type="hidden" name="category_id" value="<?php echo (int)$c['id']; ?>">
+                <button type="submit" title="Delete" class="p-2 rounded-lg text-red-600 hover:bg-red-50">
+                    <span class="material-symbols-outlined text-base">delete</span>
+                </button>
+            </form>
+        </div>
+        <?php if ($c['used_in'] > 0): ?>
+        <p class="text-[11px] text-slate-400 -mt-1 ml-3">Used in <?php echo (int)$c['used_in']; ?> class/term entr<?php echo $c['used_in']==1?'y':'ies'; ?></p>
+        <?php endif; ?>
+    <?php endforeach; ?>
+    </div>
+    <button type="button" onclick="document.getElementById('manageCatModal').classList.add('hidden')" class="mt-5 w-full bg-slate-100 text-slate-700 py-3 rounded-xl font-semibold hover:bg-slate-200">Close</button>
+</div>
+</div>
+<script>
+document.getElementById('manageCatModal').addEventListener('click', function(e) { if (e.target === this) this.classList.add('hidden'); });
+</script>
 
 <!-- Add Category Modal -->
 <div id="addCatModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
